@@ -9,11 +9,11 @@
 model pestHunting
 
 global {
-	rgb HEALTHY_COLOR <- #green;
-	rgb SLIGHTLY_DIMAGE_COLOR <- #whitesmoke;
-	rgb HEAVY_DIMAGE_COLOR <- #pink;
+	rgb HEALTHY_COLOR const: true <- #green;
+	rgb SLIGHTLY_DIMAGE_COLOR const: true <- #whitesmoke;
+	rgb HEAVY_DIMAGE_COLOR const: true <- #pink;
 //	float max_carrying_capacity <- 10.0;
-	int number_of_pest <- 100; // first step should be 0
+	int number_of_pest <- 0; // first step should be 0
 	int number_of_parasitoids <- 25;
 	int number_of_predator <- 7;
 	float step <- 6 #h;
@@ -22,18 +22,27 @@ global {
 	int circle <- 0;
 	int num_pest_eaten_by_predator <- 0;
 	int num_pest_eaten_by_parasitoid <- 0;
-	int pest_non_resistant <- 0;
-	float predation_rate <- 0.0;
 	
 	// info init
 	float normal_survival_pesticide_pest <- 0.3;
 	float normal_survival_pesticide_parasitoid <- 0.3;
 	float normal_survival_pesticide_predator <- 0.5;
+	float normal_production_rate_pest <- 1.34;
+	float normal_production_rate_pesticide_pest <- 1.6;
 	
 	float resistance_survival_pesticide_pest <- 1.0;
 	float resistance_survival_pesticide_parasitoid <- 0.4;
 	float resistance_survival_pesticide_predator <- 0.5;
 	bool is_farmer_decided <- false;
+	list<int> treatments <- [];
+	
+	// need to find
+	float pest_non_resistant <- 0.0;
+	float predation_rate <- 0.0;
+	float pest_resistant <- 0.0;
+	list<float> pest_resistants <- [];
+	list<float> predation_rates <- [];
+	list<float> pest_non_resistants <- [];
 	
 	init {
 		create Pest  number: number_of_pest {
@@ -57,28 +66,73 @@ global {
 			write("day: " + day);
 			if (day mod 8 = 0) {
 				circle <- circle + 1;
+				is_farmer_decided <- false;
 //				write("cirlce: " + circle);
 			}
 		}
 	}
 	
-	reflex update_pest_non_resistant {
-		if (circle > 1) {
-			int total_pest_eaten <- num_pest_eaten_by_predator + num_pest_eaten_by_parasitoid;
+	reflex stop_experiment when: circle = 13 {
+		write("Rice harvested, stop experiment.");
+   		do pause;
+	}
+	
+	action update_pest_non_resistant_and_relevant_fields {
+		int total_pest_eaten <- num_pest_eaten_by_predator + num_pest_eaten_by_parasitoid;
+		if (circle < 2) {
 			predation_rate <- number_of_pest = 0 ? 0 : (total_pest_eaten / number_of_pest);
-			//pest_non_resistant <- 0;
+			add predation_rate to: predation_rates;
+			add 0.0 to: pest_non_resistants;
+		}
+		else if (circle = 2) {
+			pest_non_resistant <- 198.0;
+			add pest_non_resistant to: pest_non_resistants;
+			predation_rate <- number_of_pest = 0 ? 0 : (total_pest_eaten / number_of_pest);
+			add predation_rate to: predation_rates;
+		}
+		else if (circle > 2) {
+			// update predation_rate and add to a list
+			predation_rate <- number_of_pest = 0 ? 0 : (total_pest_eaten / number_of_pest);
+			add predation_rate to: predation_rates;
+			int prev_treatment <- treatments[length(treatments) - 2];
+			int sum_of_prev_treatment <- 0;
+			loop i from: 0 to: length(treatments) - 1 {
+				sum_of_prev_treatment <- sum_of_prev_treatment + treatments[i];
+			}
+			pest_non_resistant <- pest_non_resistant * (1 - predation_rate) * (sum_of_prev_treatment = 0 ? normal_production_rate_pest : normal_production_rate_pesticide_pest) * (prev_treatment = 1 ? normal_survival_pesticide_pest : 1) + 9.8;
+			add pest_non_resistant to: pest_non_resistants;
+		}
+	}
+	
+	action update_pest_resistant {
+		if (circle < 2) {
+			add 0.0 to: pest_resistants;
+		}
+		if (circle = 2) {
+			pest_resistant <- 2.0;
+		} else if (circle > 2) {
+			//pest_resistant <- pest_resistant * (1 - )
+			// add pest resistant to list
 		}
 	}
 	
 	reflex check {
 //		Parasitoid select (each.pest_eaten !=0);
-		write("eatten: " + num_pest_eaten_by_predator + " eaten by parasitoid: " + num_pest_eaten_by_parasitoid);
+		//write("eatten: " + num_pest_eaten_by_predator + " eaten by parasitoid: " + num_pest_eaten_by_parasitoid);
+		write("pest_non_resistant: " + pest_non_resistants);
 	}
 	
 	reflex farmer_decision_to_treament when: !is_farmer_decided {
 		if (number_of_pest > 30) {
+			add 1 to: treatments;
 			//Todo: check farmer decision
+			do update_pest_non_resistant_and_relevant_fields;
+			// push to list to check latter
+		} else {
+			add 0 to: treatments;
 		}
+		is_farmer_decided <- true;
+		write("treatment list: " + treatments);
 	}
 	
 }
