@@ -33,6 +33,9 @@ global {
 	float resistance_survival_pesticide_pest <- 1.0;
 	float resistance_survival_pesticide_parasitoid <- 0.4;
 	float resistance_survival_pesticide_predator <- 0.5;
+	float resistance_reproduction_rate_pesticide_pest <- 1.8;
+	float resistance_reproduction_pest <- 1.34;
+	
 	bool is_farmer_decided <- false;
 	list<int> treatments <- [];
 	
@@ -64,7 +67,7 @@ global {
 		if (hour mod 24 = 0) {
 			day +<- int(hour / 24);
 			write("day: " + day);
-			if (day mod 8 = 0) {
+			if (day mod 7 = 0) { // weekly
 				circle <- circle + 1;
 				is_farmer_decided <- false;
 //				write("cirlce: " + circle);
@@ -75,6 +78,15 @@ global {
 	reflex stop_experiment when: circle = 13 {
 		write("Rice harvested, stop experiment.");
    		do pause;
+	}
+	
+	int get_total_prev_treatment {
+		int totoal_prev_treatment <- 0;
+		loop i from: 0 to: length(treatments) - 2 {
+			totoal_prev_treatment <- totoal_prev_treatment + treatments[i];
+		}
+			
+		return totoal_prev_treatment;
 	}
 	
 	action update_pest_non_resistant_and_relevant_fields {
@@ -96,7 +108,7 @@ global {
 			add predation_rate to: predation_rates;
 			int prev_treatment <- treatments[length(treatments) - 2];
 			int sum_of_prev_treatment <- 0;
-			loop i from: 0 to: length(treatments) - 1 {
+			loop i from: 0 to: length(treatments) - 2 {
 				sum_of_prev_treatment <- sum_of_prev_treatment + treatments[i];
 			}
 			pest_non_resistant <- pest_non_resistant * (1 - predation_rate) * (sum_of_prev_treatment = 0 ? normal_production_rate_pest : normal_production_rate_pesticide_pest) * (prev_treatment = 1 ? normal_survival_pesticide_pest : 1) + 9.8;
@@ -106,33 +118,50 @@ global {
 	
 	action update_pest_resistant {
 		if (circle < 2) {
-			add 0.0 to: pest_resistants;
+			pest_resistant <- 0.0;
+			add pest_resistant to: pest_resistants;
 		}
 		if (circle = 2) {
 			pest_resistant <- 2.0;
+			add pest_resistant to: pest_resistants;
 		} else if (circle > 2) {
-			//pest_resistant <- pest_resistant * (1 - )
+			// TODO: pest resistant list
+			pest_resistant <- pest_resistant * (1 - predation_rates[length(predation_rates)-2]) * (get_total_prev_treatment() > 1 ? resistance_reproduction_rate_pesticide_pest : resistance_reproduction_pest) + 0.2;
 			// add pest resistant to list
+			add pest_resistant to: pest_resistants; 
 		}
+	}
+	
+	action update_pest_population {
+		number_of_pest <- int(pest_resistants[length(pest_resistants) - 1] + pest_non_resistants[length(pest_non_resistants) - 1]);
 	}
 	
 	reflex check {
 //		Parasitoid select (each.pest_eaten !=0);
 		//write("eatten: " + num_pest_eaten_by_predator + " eaten by parasitoid: " + num_pest_eaten_by_parasitoid);
 		write("pest_non_resistant: " + pest_non_resistants);
+		write("pest_resistants: " + pest_resistants);
+		write("total_of_pest: " + number_of_pest);
 	}
 	
 	reflex farmer_decision_to_treament when: !is_farmer_decided {
 		if (number_of_pest > 30) {
+			write("Farmer decided to spray the insecticide on crop (mark as 1).");
 			add 1 to: treatments;
 			//Todo: check farmer decision
 			do update_pest_non_resistant_and_relevant_fields;
+			do update_pest_resistant;
+			do update_pest_population;
 			// push to list to check latter
 		} else {
+			write("Farmer decided not to spray");
 			add 0 to: treatments;
+			do update_pest_non_resistant_and_relevant_fields;
+			do update_pest_resistant;
+			do update_pest_population;
 		}
 		is_farmer_decided <- true;
-		write("treatment list: " + treatments);
+		//write("treatment list: " + treatments);
 	}
 	
 }
