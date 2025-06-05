@@ -12,7 +12,7 @@ global {
 	rgb HEALTHY_COLOR const: true <- #green;
 	rgb SLIGHTLY_DIMAGE_COLOR const: true <- #whitesmoke;
 	rgb HEAVY_DIMAGE_COLOR const: true <- #pink;
-//	float max_carrying_capacity <- 10.0;
+	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
 	int number_of_parasitoids <- 25;
 	int number_of_predator <- 7;
@@ -20,6 +20,8 @@ global {
 	float hour <- 0.0;
 	int day <- 0;
 	int circle <- 0;
+	
+	// variable renew to zero for every each circle count
 	int num_pest_eaten_by_predator <- 0;
 	int num_pest_eaten_by_parasitoid <- 0;
 	
@@ -39,13 +41,18 @@ global {
 	bool is_farmer_decided <- false;
 	list<int> treatments <- [];
 	
-	// need to find
+	// need to find of each circle
 	float pest_non_resistant <- 0.0;
 	float predation_rate <- 0.0;
 	float pest_resistant <- 0.0;
 	list<float> pest_resistants <- [];
 	list<float> predation_rates <- [];
 	list<float> pest_non_resistants <- [];
+	list<int> pest_population <- [];
+	list<int> potential_pests_eaten_by_parasitoids <- [];
+	list<int> potential_pests_eaten_by_predators <- [];
+	list<int> total_pest_eaten <- [0]; // program start need this
+	list<int> pests_total <- [0]; // program start need this
 	
 	init {
 		create Pest  number: number_of_pest {
@@ -70,6 +77,9 @@ global {
 			if (day mod 7 = 0) { // weekly
 				circle <- circle + 1;
 				is_farmer_decided <- false;
+				do update_pests_were_eaten_by;
+				do renew_variable_each_circle;
+				write("\ncircle or week: " + circle + '\n');
 //				write("cirlce: " + circle);
 			}
 		}
@@ -90,7 +100,13 @@ global {
 	}
 	
 	action update_pest_non_resistant_and_relevant_fields {
-		int total_pest_eaten <- num_pest_eaten_by_predator + num_pest_eaten_by_parasitoid;
+		/**
+		 * This function uses to update each circle (7 days or a week)
+		 */
+		// TODO1: check total pest eaten with sub species (predator, parasitoid)
+		//int total_pest_eaten <- num_pest_eaten_by_predator + num_pest_eaten_by_parasitoid; // total for all circle
+		//int total_pest_eaten <- pests_eaten_by_parasitoids[length(pests_eaten_by_parasitoids) - 1] + pests_eaten_by_parasitoids[length(pests_eaten_by_parasitoids) - 1];
+		int total_pest_eaten <- 0; // TODO: tmr fix this
 		if (circle < 2) {
 			predation_rate <- number_of_pest = 0 ? 0 : (total_pest_eaten / number_of_pest);
 			add predation_rate to: predation_rates;
@@ -104,14 +120,17 @@ global {
 		}
 		else if (circle > 2) {
 			// update predation_rate and add to a list
+			// TODO2: fix predation rate:
 			predation_rate <- number_of_pest = 0 ? 0 : (total_pest_eaten / number_of_pest);
 			add predation_rate to: predation_rates;
+			write("predation_rate: " + predation_rate);
+			write("predation_rates: " + predation_rates);
 			int prev_treatment <- treatments[length(treatments) - 2];
-			int sum_of_prev_treatment <- 0;
-			loop i from: 0 to: length(treatments) - 2 {
-				sum_of_prev_treatment <- sum_of_prev_treatment + treatments[i];
-			}
-			pest_non_resistant <- pest_non_resistant * (1 - predation_rate) * (sum_of_prev_treatment = 0 ? normal_production_rate_pest : normal_production_rate_pesticide_pest) * (prev_treatment = 1 ? normal_survival_pesticide_pest : 1) + 9.8;
+			int sum_first_prev_treatment <- treatments[0] + treatments[length(treatments) - 2];
+//			loop i from: 0 to: length(treatments) - 2 {
+//				sum_of_prev_treatment <- sum_of_prev_treatment + treatments[i];
+//			}
+			pest_non_resistant <- pest_non_resistant * (1 - predation_rate) * (sum_first_prev_treatment = 0 ? normal_production_rate_pest : normal_production_rate_pesticide_pest) * (prev_treatment = 1 ? normal_survival_pesticide_pest : 1) + 9.8;
 			add pest_non_resistant to: pest_non_resistants;
 		}
 	}
@@ -134,21 +153,29 @@ global {
 	
 	action update_pest_population {
 		number_of_pest <- int(pest_resistants[length(pest_resistants) - 1] + pest_non_resistants[length(pest_non_resistants) - 1]);
+		add number_of_pest to: pest_population; // store in list
+		create Pest number: number_of_pest;
 	}
 	
-	reflex check {
-//		Parasitoid select (each.pest_eaten !=0);
-		//write("eatten: " + num_pest_eaten_by_predator + " eaten by parasitoid: " + num_pest_eaten_by_parasitoid);
-		write("pest_non_resistant: " + pest_non_resistants);
-		write("pest_resistants: " + pest_resistants);
-		write("total_of_pest: " + number_of_pest);
+	action update_pests_were_eaten_by {
+		// update pest was eaten by to list
+		add num_pest_eaten_by_parasitoid to: potential_pests_eaten_by_parasitoids;
+		add num_pest_eaten_by_predator to: potential_pests_eaten_by_predators;
+		write("pests_eaten_by_parasitoids: " + potential_pests_eaten_by_parasitoids);
+		write("pests_eaten_by_predators: " + potential_pests_eaten_by_predators);
+	}
+	
+	action renew_variable_each_circle {
+		// this function use for renewing variable to zero every each circle count
+		num_pest_eaten_by_parasitoid <- 0;
+		num_pest_eaten_by_predator <- 0;
 	}
 	
 	reflex farmer_decision_to_treament when: !is_farmer_decided {
 		if (number_of_pest > 30) {
-			write("Farmer decided to spray the insecticide on crop (mark as 1).");
+			write("Farmer decided to spray on crop (mark as 1).");
 			add 1 to: treatments;
-			//Todo: check farmer decision
+			write("treatments: " + treatments);
 			do update_pest_non_resistant_and_relevant_fields;
 			do update_pest_resistant;
 			do update_pest_population;
@@ -156,12 +183,22 @@ global {
 		} else {
 			write("Farmer decided not to spray");
 			add 0 to: treatments;
+			write("treatments: " + treatments);
 			do update_pest_non_resistant_and_relevant_fields;
 			do update_pest_resistant;
 			do update_pest_population;
 		}
 		is_farmer_decided <- true;
 		//write("treatment list: " + treatments);
+	}
+	
+		reflex check {
+//		Parasitoid select (each.pest_eaten !=0);
+		//write("eatten: " + num_pest_eaten_by_predator + " eaten by parasitoid: " + num_pest_eaten_by_parasitoid);
+		write("pest_non_resistant: " + pest_non_resistants);
+		write("pest_resistants: " + pest_resistants);
+		write("total_of_pest: " + number_of_pest);
+		write("total created pest ui: " + length(Pest));
 	}
 	
 }
@@ -240,6 +277,7 @@ species Parasitoid parent: Insect {
 			pest_eaten <- pest_eaten + 1;
 			num_pest_eaten_by_parasitoid <- num_pest_eaten_by_parasitoid + 1;
 			ask p {
+				number_of_pest <- number_of_pest - 1;
 				do die;
 			}
 			
@@ -260,6 +298,7 @@ species Predator parent: Insect {
 			pest_eaten <- pest_eaten + 1;
 			num_pest_eaten_by_predator <- num_pest_eaten_by_predator + 1;
 			ask p {
+				number_of_pest <- number_of_pest - 1;
 				do die;
 			}
 			
@@ -273,7 +312,7 @@ species Predator parent: Insect {
 
 species Farmer {
 	reflex apply_treatment_to_rice_crop {
-		write("circle: " + circle);
+		write("farmer applay treatment work!");
 	}
 }
 
