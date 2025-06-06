@@ -26,11 +26,18 @@ global {
 	int num_pest_eaten_by_parasitoid <- 0;
 	
 	// info init
-	float normal_survival_pesticide_pest <- 0.3;
+	// parasitoid
 	float normal_survival_pesticide_parasitoid <- 0.3;
-	float normal_survival_pesticide_predator <- 0.5;
+	float normal_consumption_rate_parasitoid <- 1.1;
+	// pest
+	float normal_survival_pesticide_pest <- 0.3;
 	float normal_production_rate_pest <- 1.34;
 	float normal_production_rate_pesticide_pest <- 1.6;
+	// predator
+	float normal_survival_pesticides_predator <- 0.5;
+	float normal_reproduction_rate_predator <- 1.1;
+	float normal_consumption_rate_predator <- 2.5;
+	
 	
 	float resistance_survival_pesticide_pest <- 1.0;
 	float resistance_survival_pesticide_parasitoid <- 0.4;
@@ -53,6 +60,9 @@ global {
 	list<int> potential_pests_eaten_by_predators <- [];
 	list<int> total_pest_eaten <- [0]; // program start need this
 	list<int> pests_total <- [0]; // program start need this
+	list<int> predators <- [7];
+	list<int> parasitoids <- [25]; // TODO: update parasitoids
+	list<int> total_potential_pests_eaten <- [];
 	
 	init {
 		create Pest  number: number_of_pest {
@@ -66,6 +76,16 @@ global {
 		create Predator number: number_of_predator {
 			
 		}
+		
+		// initial variable
+		do initialise_variable;
+	}
+	
+	action initialise_variable {
+		// only circle one
+		write("start initialise vairable now: ");
+		//		add parasitoids[0] * normal_consumption_rate_parasitoid to: potential_pests_eaten_by_parasitoids;
+		//		add predators[0] * normal_consumption_rate_predator to: potential_pests_eaten_by_predators;
 	}
 	
 	reflex check_date_time {
@@ -77,7 +97,7 @@ global {
 			if (day mod 7 = 0) { // weekly
 				circle <- circle + 1;
 				is_farmer_decided <- false;
-				do update_pests_were_eaten_by;
+				//do update_pests_were_eaten_by;
 				do renew_variable_each_circle;
 				write("\ncircle or week: " + circle + '\n');
 //				write("cirlce: " + circle);
@@ -97,6 +117,13 @@ global {
 		}
 			
 		return totoal_prev_treatment;
+	}
+	
+	action update_predators {
+		if (circle > 0) {
+			number_of_predator <- int((treatments[length(treatments) - 2] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
+			add number_of_predator to: predators;
+		}
 	}
 	
 	action update_pest_non_resistant_and_relevant_fields {
@@ -171,23 +198,58 @@ global {
 		num_pest_eaten_by_predator <- 0;
 	}
 	
+	action update_potential_pests_eaten_by_predators {
+		add normal_consumption_rate_predator * predators[length(predators) - 1] to: potential_pests_eaten_by_predators;
+	}
+	
+	action update_parasitoids { // TODO: update this
+		// first init or circle zero will be 25
+		// we treated or sprayed
+		//if (circle < 1) return;
+		//int tmp_parasitoid <- treatments[length(treatments) - 2] = 1 ? normal_survival_pesticides_parasitoids : 1 * parasitoids[length(parasitoids) - 2] * total_potential_pest
+	}
+	
+	action update_potential_pests_eaten_by_parasitoids {
+		// maximum eat of parasitoid for each circle count
+		add normal_consumption_rate_parasitoid * parasitoids[length(parasitoids) - 1] to: potential_pests_eaten_by_parasitoids;
+	}
+	
+	action update_total_potential_pest_eaten {
+		// each circle update
+		add potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators) - 1] + potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids) - 1] to: total_potential_pests_eaten;
+	}
+	
+	action update_total_pest_eaten {
+		// TODO: update this first on Monday
+		int tmp_total_potential_pest_eaten <- potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids) - 1] + potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators) -1];
+		//add (tmp_total_potential_pest_eaten < pests_total[length(pests_total) - 1] ? ((potential_pest_eaten_by_parasitoids[length(potential_pest_eaten_by_parasitoids) - 1] + potentail_pest_eaten_by_predators[length(potentail_pest_eaten_by_predators) - 1]) : pests_total[length(pests_total) - 1]) to: total_pest_eaten;
+	}
+	
 	reflex farmer_decision_to_treament when: !is_farmer_decided {
-		if (number_of_pest > 30) {
+		write("circle: " + circle);
+		/*if (number_of_pest > 30) {
 			write("Farmer decided to spray on crop (mark as 1).");
 			add 1 to: treatments;
 			write("treatments: " + treatments);
-			do update_pest_non_resistant_and_relevant_fields;
-			do update_pest_resistant;
-			do update_pest_population;
-			// push to list to check latter
 		} else {
 			write("Farmer decided not to spray");
 			add 0 to: treatments;
 			write("treatments: " + treatments);
-			do update_pest_non_resistant_and_relevant_fields;
-			do update_pest_resistant;
-			do update_pest_population;
+		}*/
+		// test with apply all treatment
+		if (circle = 0) {
+			add 0 to: treatments;
+		} else {
+			add 1 to: treatments;
 		}
+		do update_predators;
+		do update_potential_pests_eaten_by_predators;
+		do update_potential_pests_eaten_by_parasitoids;
+		do update_total_potential_pest_eaten;
+		//TODO: next
+		//do update_pest_non_resistant_and_relevant_fields;
+		//do update_pest_resistant;
+		//do update_pest_population;
 		is_farmer_decided <- true;
 		//write("treatment list: " + treatments);
 	}
@@ -195,10 +257,14 @@ global {
 		reflex check {
 //		Parasitoid select (each.pest_eaten !=0);
 		//write("eatten: " + num_pest_eaten_by_predator + " eaten by parasitoid: " + num_pest_eaten_by_parasitoid);
-		write("pest_non_resistant: " + pest_non_resistants);
-		write("pest_resistants: " + pest_resistants);
-		write("total_of_pest: " + number_of_pest);
-		write("total created pest ui: " + length(Pest));
+		write("parasitoids: " + parasitoids);
+		write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
+		write("predator each circle: " + predators);
+		write("potential pest eaten by predators: " + potential_pests_eaten_by_predators);
+		//write("pest_non_resistant: " + pest_non_resistants);
+		//write("pest_resistants: " + pest_resistants);
+		//write("total_of_pest: " + number_of_pest);
+		//write("total created pest ui: " + length(Pest));
 	}
 	
 }
