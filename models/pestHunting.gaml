@@ -30,21 +30,19 @@ global {
 	float normal_survival_pesticide_parasitoid <- 0.3;
 	float normal_consumption_rate_parasitoid <- 1.1;
 	float normal_reproduction_rate_parasitoid <- 1.25;
+	float resistance_survival_pesticide_parasitoid <- 0.4;
 	// pest
 	float normal_survival_pesticide_pest <- 0.3;
 	float normal_production_rate_pest <- 1.34;
 	float normal_production_rate_pesticide_pest <- 1.6;
+	float resistance_survival_pesticide_pest <- 1.0;
+	float resistance_reproduction_rate_pesticide_pest <- 1.8;
+	float resistance_reproduction_pest <- 1.34;
 	// predator
 	float normal_survival_pesticides_predator <- 0.5;
 	float normal_reproduction_rate_predator <- 1.1;
 	float normal_consumption_rate_predator <- 2.5;
-	
-	
-	float resistance_survival_pesticide_pest <- 1.0;
-	float resistance_survival_pesticide_parasitoid <- 0.4;
 	float resistance_survival_pesticide_predator <- 0.5;
-	float resistance_reproduction_rate_pesticide_pest <- 1.8;
-	float resistance_reproduction_pest <- 1.34;
 	
 	bool is_farmer_decided <- false;
 	list<int> treatments <- [];
@@ -57,13 +55,15 @@ global {
 	list<float> predation_rates <- [];
 	list<float> pest_non_resistants <- [];
 	//list<int> pest_population <- []; // pest_total
-	list<int> potential_pests_eaten_by_parasitoids <- [];
-	list<int> potential_pests_eaten_by_predators <- [];
+	list<int> potential_pests_eaten_by_parasitoids <- []; // maximum amount of pest eaten by parasitoids
+	list<int> potential_pests_eaten_by_predators <- []; // maximum of predators to eat pest
 	list<int> total_pest_eaten <- []; // program start need this
 	list<int> pests_total <- [0]; // program start need this
 	list<int> predators <- [7];
-	list<int> parasitoids <- [25]; // TODO: update parasitoids
+	list<int> parasitoids <- [25];
 	list<int> total_potential_pests_eaten <- [];
+	list<int> field_cases <- [];
+	list<float> dynamic_yields <- [];
 	
 	init {
 		create Pest  number: number_of_pest {
@@ -111,6 +111,14 @@ global {
    		do pause;
 	}
 	
+	action calc_dynamic_yield {
+		add (circle * 100/11) to: dynamic_yields;
+	}
+	
+	action calc_field_case {
+		add (field_cases[length(field_cases) - 2] - (pests_total[length(pests_total)-1]/15)) > 0 ? round(field_cases[length(field_cases) - 2] - (pests_total[length(pests_total)-1]/15)) : 0 to: field_cases;
+	}
+	
 	int get_total_prev_treatment {
 		int totoal_prev_treatment <- 0;
 		loop i from: 0 to: length(treatments) - 2 {
@@ -122,7 +130,7 @@ global {
 	
 	action update_predators {
 		if (circle > 0) {
-			number_of_predator <- int((treatments[length(treatments) - 2] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
+			number_of_predator <- round((treatments[length(treatments) - 2] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
 			add number_of_predator to: predators;
 		}
 	}
@@ -157,9 +165,8 @@ global {
 			// update predation_rate and add to a list
 			// TODO2: fix predation rate:
 			float pev_predation_rate <- predation_rates[length(predation_rates) - 2];
-			add predation_rate to: predation_rates;
-			write("predation_rate: " + predation_rate);
-			write("predation_rates: " + predation_rates);
+//			write("predation_rate: " + predation_rate);
+//			write("predation_rates: " + predation_rates);
 			int prev_treatment <- treatments[length(treatments) - 2];
 			int sum_first_prev_treatment <- treatments[0] + treatments[length(treatments) - 2];
 //			loop i from: 0 to: length(treatments) - 2 {
@@ -208,12 +215,12 @@ global {
 	}
 	
 	action update_potential_pests_eaten_by_predators {
-		add normal_consumption_rate_predator * predators[length(predators) - 1] to: potential_pests_eaten_by_predators;
+		add round(normal_consumption_rate_predator * predators[length(predators) - 1]) to: potential_pests_eaten_by_predators;
 	}
 	
 	action update_potential_pests_eaten_by_parasitoids {
 		// maximum eat of parasitoid for each circle count
-		add normal_consumption_rate_parasitoid * parasitoids[length(parasitoids) - 1] to: potential_pests_eaten_by_parasitoids;
+		add round(normal_consumption_rate_parasitoid * parasitoids[length(parasitoids) - 1]) to: potential_pests_eaten_by_parasitoids;
 	}
 	
 	action update_total_potential_pest_eaten {
@@ -226,18 +233,23 @@ global {
 		add (tmp_total_potential_pest_eaten < pests_total[length(pests_total) - 1]) ? tmp_total_potential_pest_eaten : pests_total[length(pests_total) - 1] to: total_pest_eaten;
 	}
 	
-	action update_parasitoids { // TODO: update this
+	action update_parasitoids { // TODO: fix this error when circle = 7
 		// first init or circle zero will be 25
 		// we treated or sprayed
 		if (circle < 1) {return;}
-		float tmp_multi_reproduce <- ((normal_reproduction_rate_parasitoid - 1) * total_pest_eaten[length(total_pest_eaten) - 2] / total_potential_pests_eaten[length(total_potential_pests_eaten) - 2]) + 1;
+		write("normal_reproduction_rate parasitoid: " + normal_reproduction_rate_parasitoid);
+		write("total pest eaten: " + total_pest_eaten[length(total_pest_eaten) - 2]);
+		write("total potential pest eaten: " + total_potential_pests_eaten[length(total_potential_pests_eaten) - 2]);
+
+		//float tmp_multi_reproduce <- (((normal_reproduction_rate_parasitoid - 1) * total_pest_eaten[length(total_pest_eaten) - 2] / total_potential_pests_eaten[length(total_potential_pests_eaten) - 2]) + 1);
+		//write("tmp_multi_reproduce: " + tmp_multi_reproduce);
 //		float tmp_production_rate_calc <- ((total_potential_pests_eaten[length(total_potential_pests_eaten)-1] = total_pest_eaten[length(total_pest_eaten) - 1]) ? normal_reproduction_rate_parasitoid : tmp_multi_reproduce);
 //		write("tmp multi reproduce: " + tmp_multi_reproduce);
 //		write("tmp reproduction_rate_calc: " + tmp_production_rate_calc);
 //		float normal_survival <- (treatments[length(treatments) - 2] = 1 ? normal_survival_pesticide_parasitoid : 1);
 //		write("normal survival: " + normal_survival);
 //		write("parasitoids: " + parasitoids[length(parasitoids) - 1]);
-		int tmp_parasitoid <- round((treatments[length(treatments) - 2] = 1 ? normal_survival_pesticide_parasitoid : 1) * parasitoids[length(parasitoids) - 1] * ((total_potential_pests_eaten[length(total_potential_pests_eaten)-1] = total_pest_eaten[length(total_pest_eaten) - 1]) ? normal_reproduction_rate_parasitoid : tmp_multi_reproduce));
+		int tmp_parasitoid <- round((treatments[length(treatments) - 2] = 1 ? normal_survival_pesticide_parasitoid : 1) * parasitoids[length(parasitoids) - 1] * ((total_potential_pests_eaten[length(total_potential_pests_eaten)-1] = total_pest_eaten[length(total_pest_eaten) - 1]) ? normal_reproduction_rate_parasitoid : (((normal_reproduction_rate_parasitoid - 1) * total_pest_eaten[length(total_pest_eaten) - 2] / total_potential_pests_eaten[length(total_potential_pests_eaten) - 2]) + 1)));
 		add tmp_parasitoid to: parasitoids;
 		write("parasitoids: " + parasitoids);
 		//add tmp_parasitoid to: parasitoids;
@@ -260,17 +272,20 @@ global {
 		} else {
 			add 1 to: treatments;
 		}
+		// independant var
+		do calc_dynamic_yield;
+		// structure var
 		do update_predators;
 		do update_potential_pests_eaten_by_predators;
 		do update_potential_pests_eaten_by_parasitoids;
 		do update_total_potential_pest_eaten;
 		do update_total_pest_eaten;
 		do update_parasitoids;
-		//TODO: next
 		do update_pest_non_resistant_and_relevant_fields;
 		do update_pest_resistant;
 		do update_pest_total;
 		do update_predation_rate;
+		do calc_field_case;
 		is_farmer_decided <- true;
 		//write("treatment list: " + treatments);
 	}
@@ -360,7 +375,7 @@ species Parasitoid parent: Insect {
 		location <- plot_grid.location;
 	}
 	
-	reflex eat {
+	reflex eat when: num_pest_eaten_by_parasitoid < potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
 		loop p over: insectList {
 			pest_eaten <- pest_eaten + 1;
@@ -381,7 +396,7 @@ species Predator parent: Insect {
 		location <- plot_grid.location;
 	}
 	
-	reflex eat {
+	reflex eat when: num_pest_eaten_by_predator < potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
 		loop p over: insectList {
 			pest_eaten <- pest_eaten + 1;
@@ -412,7 +427,7 @@ experiment Experiment type: gui{
 			species Pest;
 			species Parasitoid;
 			species Predator;
-			species Farmer;
+			//species Farmer;
 		}
 	}
 }
