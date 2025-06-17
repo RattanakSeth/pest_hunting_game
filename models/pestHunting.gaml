@@ -92,7 +92,7 @@ global {// TODO: change this in cell tmr
 		// only cycle_count one
 		write("start initialise vairable now: ");
 		ask rice_grid {
-			do update_color;
+			do change_color;
 		}
 		//		add parasitoids[0] * normal_consumption_rate_parasitoid to: potential_pests_eaten_by_parasitoids;
 		//		add predators[0] * normal_consumption_rate_predator to: potential_pests_eaten_by_predators;
@@ -132,19 +132,30 @@ global {// TODO: change this in cell tmr
 	}
 	
 	int get_total_prev_treatment {
-		int totoal_prev_treatment <- 0;
+		int total_prev_treatment <- 0;
 		loop i from: 0 to: length(treatments) - 2 {
-			totoal_prev_treatment <- totoal_prev_treatment + treatments[i];
+			total_prev_treatment <- total_prev_treatment + treatments[i];
 		}
 			
-		return totoal_prev_treatment;
+		return total_prev_treatment;
 	}
 	
 	action update_predators {
 		if (cycle_count > 0) {
 			number_of_predator <- round((treatments[length(treatments) - 2] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
 			add number_of_predator to: predators;
-			create Predator number: number_of_predator;
+			//create Predator number: number_of_predator;
+			int update_predator_amount <- predators[length(predators) - 1] - predators[length(predators) - 2];
+			if (update_predator_amount > 0) {
+				create Predator number: update_predator_amount;
+			} else if (update_predator_amount < 0) {
+				list<Predator> selectedPredator <- abs(update_predator_amount) among Predator;
+				loop p over: selectedPredator {
+					ask p {
+						do die;
+					}
+				}
+			}
 		}
 	}
 	
@@ -171,8 +182,6 @@ global {// TODO: change this in cell tmr
 //			add predation_rate to: predation_rates;
 		}
 		else if (cycle_count > 2) {
-			// update predation_rate and add to a list
-			// TODO2: fix predation rate:
 			float pev_predation_rate <- predation_rates[length(predation_rates) - 2];
 //			write("predation_rate: " + predation_rate);
 //			write("predation_rates: " + predation_rates);
@@ -195,7 +204,6 @@ global {// TODO: change this in cell tmr
 			pest_resistant <- 2.0;
 			add pest_resistant to: pest_resistants;
 		} else if (cycle_count > 2) {
-			// TODO: pest resistant list
 			pest_resistant <- pest_resistant * (1 - predation_rates[length(predation_rates)-2]) * (get_total_prev_treatment() > 1 ? resistance_reproduction_rate_pesticide_pest : resistance_reproduction_pest) + 0.2;
 			// add pest resistant to list
 			add pest_resistant to: pest_resistants; 
@@ -206,7 +214,18 @@ global {// TODO: change this in cell tmr
 		number_of_pest <- int(pest_resistants[length(pest_resistants) - 1] + pest_non_resistants[length(pest_non_resistants) - 1]);
 		//add number_of_pest to: pest_population; // store in list
 		add number_of_pest to: pests_total;
-		create Pest number: number_of_pest;
+		//create Pest number: number_of_pest;
+		int pest_amount <- pests_total[length(pests_total) - 1] - pests_total[length(pests_total) - 2];
+		if (pest_amount > 0) {
+			create Pest number: pest_amount;
+		} else if (pest_amount < 0) {
+			list<Pest> selectedPest <- abs(pest_amount) among Pest;
+			loop p over: selectedPest {
+				ask p {
+					do die;
+				}
+			}
+		}
 	}
 	
 	action update_pests_were_eaten_by {
@@ -250,18 +269,24 @@ global {// TODO: change this in cell tmr
 		write("total pest eaten: " + total_pest_eaten[length(total_pest_eaten) - 2]);
 		write("total potential pest eaten: " + total_potential_pests_eaten[length(total_potential_pests_eaten) - 2]);
 
-		//float tmp_multi_reproduce <- (((normal_reproduction_rate_parasitoid - 1) * total_pest_eaten[length(total_pest_eaten) - 2] / total_potential_pests_eaten[length(total_potential_pests_eaten) - 2]) + 1);
-		//write("tmp_multi_reproduce: " + tmp_multi_reproduce);
-//		float tmp_production_rate_calc <- ((total_potential_pests_eaten[length(total_potential_pests_eaten)-1] = total_pest_eaten[length(total_pest_eaten) - 1]) ? normal_reproduction_rate_parasitoid : tmp_multi_reproduce);
-//		write("tmp multi reproduce: " + tmp_multi_reproduce);
-//		write("tmp reproduction_rate_calc: " + tmp_production_rate_calc);
-//		float normal_survival <- (treatments[length(treatments) - 2] = 1 ? normal_survival_pesticide_parasitoid : 1);
-//		write("normal survival: " + normal_survival);
-//		write("parasitoids: " + parasitoids[length(parasitoids) - 1]);
 		int tmp_parasitoid <- round((treatments[length(treatments) - 2] = 1 ? normal_survival_pesticide_parasitoid : 1) * parasitoids[length(parasitoids) - 1] * ((total_potential_pests_eaten[length(total_potential_pests_eaten)-1] = total_pest_eaten[length(total_pest_eaten) - 1]) ? normal_reproduction_rate_parasitoid : (((normal_reproduction_rate_parasitoid - 1) * total_pest_eaten[length(total_pest_eaten) - 2] / total_potential_pests_eaten[length(total_potential_pests_eaten) - 2]) + 1)));
 		add tmp_parasitoid to: parasitoids;
-		create Parasitoid number: tmp_parasitoid;
-		//write("parasitoids: " + parasitoids);
+		int parasitoid_amount <- parasitoids[length(parasitoids) - 1] - parasitoids[length(parasitoids) - 2];
+		if (parasitoid_amount > 0) {
+			create Parasitoid number: parasitoid_amount;
+		} else if (parasitoid_amount < 0) {
+			list<Parasitoid> selectedParasitoid <- abs(parasitoid_amount) among Parasitoid;
+			loop p over: selectedParasitoid {
+				ask p {
+					do die;
+				}
+			}
+		}
+//		create Parasitoid number: tmp_parasitoid;
+		
+		write("number of parasitoid: " + tmp_parasitoid);
+		write("number of test length: " + length(Parasitoid));
+		write("number of parasitoids: " + parasitoids);
 		//add tmp_parasitoid to: parasitoids;
 	}
 	
@@ -281,10 +306,43 @@ global {// TODO: change this in cell tmr
 		if (cycle_count < 1) {return;}
 		int tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
 		add tmp_remove_rice_yield to: remove_sticky_notes;
+		list<rice_grid> rice_pest <- rice_grid where(length(Pest) > 0 and each.cell_value > 0);//select rice_grid where(each.)
+		write("tmp remove sticky note: " + tmp_remove_rice_yield);
+		write("rice pest: " + rice_pest);
+		if (abs(tmp_remove_rice_yield) != 0) {
+			if (length(rice_pest) > 0) {
+				float tmp_remove <- float(abs(tmp_remove_rice_yield));
+				loop rp over: rice_pest {
+					if (tmp_remove = 0.0) {break;}
+					float cellValue <- rp.cell_value;
+					tmp_remove <- tmp_remove - cellValue;
+					
+					if (tmp_remove < 0) {
+						ask rp {
+							cell_value <- abs(tmp_remove);
+							do change_color;
+						}
+						tmp_remove <- 0.0;
+					} else {
+						ask rp {
+							cell_value <- 0.0;
+							do change_color;
+						}
+					}
+//					write("rp: " + cellValue);
+				}
+			}
+		}
+		
+		
 		// ask rice grid to remove sticky notes
+		
+//		ask rice_grid {
+//			
+//		}
 	}
 	
-	reflex farmer_decision_to_treament when: !is_farmer_decided {
+	reflex farmer_decision_to_treatment when: !is_farmer_decided {
 		write("cycle_count: " + cycle_count);
 		/*if (number_of_pest > 30) {
 			write("Farmer decided to spray on crop (mark as 1).");
@@ -296,7 +354,7 @@ global {// TODO: change this in cell tmr
 			write("treatments: " + treatments);
 		}*/
 		// test with apply all treatment
-		if (cycle_count = 0) {
+		if (cycle_count = 0 or cycle_count = 13) {
 			add 0 to: treatments;
 		} else {
 			add 1 to: treatments;
@@ -323,11 +381,8 @@ global {// TODO: change this in cell tmr
 		//write("treatment list: " + treatments);
 	}
 	
-		reflex check {
-	//		Parasitoid select (each.pest_eaten !=0);
-			//write("eatten: " + num_pest_eaten_by_predator + " eaten by parasitoid: " + num_pest_eaten_by_parasitoid);
-			
-			write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
+	reflex check {
+			/*write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
 			write("predator each cycle_count: " + predators);
 			write("potential pest eaten by predators: " + potential_pests_eaten_by_predators);
 			write("totoal pest eaten: " + total_pest_eaten);
@@ -337,9 +392,9 @@ global {// TODO: change this in cell tmr
 			write("potential yield: " + potential_yields);
 			write("real yield in tons: " + real_yield_in_tons);
 			write("max dynamic_yield: " + max_dynamic_yields);
-			
-	//		 write("cycle: " + cycle);
-	//		 write("cycle_count: " + cycle_count);
+			write("number of predators: " + length(Predator));
+			write("number of parasitoid: " + length(Parasitoid));
+			write("number of pest: " + length(Pest));*/
 	}
 	
 }
@@ -348,8 +403,9 @@ grid rice_grid width: 10 height: 10 neighbors: 8  { // good to go with 30 x 30
 //	rgb color <- #blue;
 //	float carrying_capacity;
 //	float biomass;
-	int color_value <- 3;
+//	int color_value <- 3;
 	rgb color <- #green;
+	float cell_value min: 0.0 max: 3.0 <- 3.0;
 	
 	init {
 //		carrying_capacity <- max_carrying_capacity;
@@ -362,13 +418,38 @@ grid rice_grid width: 10 height: 10 neighbors: 8  { // good to go with 30 x 30
 //		draw self color: color;
 //	}
 	
-	action update_color {
-		if (color_value = 2) {
-			color <- HEALTHY_COLOR;
-		} else if (color_value = 1) {
-			color <- SLIGHTLY_DIMAGE_COLOR;
-		} else if (color_value = 0) {
-			color <- HEAVY_DIMAGE_COLOR;
+//	action update_color {
+//		if (color_value = 2) {
+//			color <- HEALTHY_COLOR;
+//		} else if (color_value = 1) {
+//			color <- SLIGHTLY_DIMAGE_COLOR;
+//		} else if (color_value = 0) {
+//			color <- HEAVY_DIMAGE_COLOR;
+//		}
+//	}
+	
+	action change_color {
+		if (cell_value = 3) {
+			// Dark Green Background
+			color <- rgb(0, 112, 48);
+		} else if (cell_value = 2) {
+			// Light Blue Background
+			color <- rgb(221, 235, 247);
+		} else if (cell_value <= 1.1 and cell_value <= 2.9) {
+			// Medium Blue Background
+			color <- rgb(189, 215, 238);
+		} else if (cell_value < 1) {
+			// Gray Background
+			color <- rgb(217, 217, 217);
+		} else if (cell_value <= 0.1 and cell_value <= 1.9) {
+			// Light Magenta Background
+			color <- rgb(242, 220, 219);
+		} else if (cell_value > 2.1) {
+			// Light Green Background
+			color <- rgb(198, 239, 206);
+		} else if (cell_value = 1) {
+			// Pink Background
+			color <- rgb(255, 199, 206);
 		}
 	}
 }
@@ -467,15 +548,23 @@ experiment Experiment type: gui{
 			//species Farmer;
 		}
 		
+		// every 28 cycles equal to one cycle count ( a week)
 		display plots type: 2d refresh:every(28#cycles){
-			
 				chart "Population Dynamics" type: series {
 				    data "Pest" value: length(Pest);//[cycle_count, length(Pest)] color: #red;
 				    data "Parasitoid" value: length(Parasitoid);//[cycle_count, length(Parasitoid)] color: #blue;
 				    data "Predator" value: length(Predator);//[cycle_count, length(Predator)] color: #yellow;
 				}
-
 		}
+		
+//		display crop_yield type: 2d refresh:every(28#cycles){
+//				chart "Population Dynamics" type: series {
+//				    data "Real Yield (tons)" value: real_yields;//[cycle_count, length(Pest)] color: #red;
+//				    data "Parasitoid" value: length(Parasitoid);//[cycle_count, length(Parasitoid)] color: #blue;
+//				    data "Predator" value: length(Predator);//[cycle_count, length(Predator)] color: #yellow;
+//				}
+//
+//		}
 		
 	}
 	
