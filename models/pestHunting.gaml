@@ -1,6 +1,8 @@
 /**
 * Name: pestHunting
-* Based on the internal empty template. 
+* Base on research and game formula on the excel file
+* Using grid and movement on grid
+* First Toy Model
 * Author: Rattanak
 * Tags: farmer
 */
@@ -8,10 +10,13 @@
 
 model pestHunting
 
-global {// TODO: change this in cell tmr
-	rgb HEALTHY_COLOR const: true <- rgb(0, 176, 80);
-	rgb SLIGHTLY_DIMAGE_COLOR const: true <- rgb(221, 235, 247);
-	rgb HEAVY_DIMAGE_COLOR const: true <- rgb(242, 220, 219);
+global {
+	//rgb HEALTHY_COLOR const: true <- rgb(0, 176, 80);
+	//rgb SLIGHTLY_DIMAGE_COLOR const: true <- rgb(221, 235, 247);
+	//rgb HEAVY_DIMAGE_COLOR const: true <- rgb(242, 220, 219);
+	rgb PARASITOID_COLOR const: true <- #black;
+	rgb PREDATOR_COLOR const: true <- #violet;
+	rgb PEST_COLOR const: true <- #red;
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
 	int number_of_parasitoids <- 25;
@@ -21,6 +26,7 @@ global {// TODO: change this in cell tmr
 	int day <- 0;
 	int cycle_count <- 0; // cycle count
 	int cycle <- 0;
+	float per_cycle_count <- 24 / (step/3600) * 7;
 	
 	// variable renew to zero for every each cycle_count count
 	int num_pest_eaten_by_predator <- 0;
@@ -72,15 +78,22 @@ global {// TODO: change this in cell tmr
 	
 	init {
 		create Pest  number: number_of_pest {
-			
+//			current_cell <- one_of(rice_grid);
+//			location <- current_cell.location;
+//			current_cell.is_free <- false;
+
 		}
 		
 		create Parasitoid number: number_of_parasitoids {
-			
+//			current_cell <- one_of(rice_grid);
+//			location <- current_cell.location;
+//			current_cell.is_free <- false;
 		}
 		
 		create Predator number: number_of_predator {
-			
+//			current_cell <- one_of(rice_grid);
+//			location <- current_cell.location;
+//			current_cell.is_free <- false;
 		}
 		
 		// initial variable
@@ -90,7 +103,8 @@ global {// TODO: change this in cell tmr
 	
 	action initialise_variable {
 		// only cycle_count one
-		write("start initialise vairable now: ");
+		write("start initialise vairable now: " + per_cycle_count);
+		
 		ask rice_grid {
 			do change_color;
 		}
@@ -156,13 +170,16 @@ global {// TODO: change this in cell tmr
 					}
 				}
 			}
+			
+			write("predators: " + predators);
+			write("length of it; " + length(Predator));
 		}
 	}
 	
 	action update_predation_rate {
 		float tmp_predation_rate <- pests_total[length(pests_total)-1] = 0 ? 0 : (total_pest_eaten[length(total_pest_eaten)-1]/ pests_total[length(pests_total)-1]);
 		add tmp_predation_rate to: predation_rates;
-		write("tmp predation rate: " + tmp_predation_rate);
+		//write("tmp predation rate: " + tmp_predation_rate);
 		//addpredation_rates
 	}
 	
@@ -357,7 +374,9 @@ global {// TODO: change this in cell tmr
 		if (cycle_count = 0 or cycle_count = 13) {
 			add 0 to: treatments;
 		} else {
-			add 1 to: treatments;
+			bool confirm <- user_confirm("Confirm","Please confirm, Would you spray or not?");
+			write("user confirm: " + confirm);
+			add confirm ? 1 : 0 to: treatments;
 		}
 		// independant var
 		do calc_dynamic_yield;
@@ -382,7 +401,7 @@ global {// TODO: change this in cell tmr
 	}
 	
 	reflex check {
-			/*write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
+			write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
 			write("predator each cycle_count: " + predators);
 			write("potential pest eaten by predators: " + potential_pests_eaten_by_predators);
 			write("totoal pest eaten: " + total_pest_eaten);
@@ -394,7 +413,7 @@ global {// TODO: change this in cell tmr
 			write("max dynamic_yield: " + max_dynamic_yields);
 			write("number of predators: " + length(Predator));
 			write("number of parasitoid: " + length(Parasitoid));
-			write("number of pest: " + length(Pest));*/
+			write("number of pest: " + length(Pest));
 	}
 	
 }
@@ -406,6 +425,7 @@ grid rice_grid width: 10 height: 10 neighbors: 8  { // good to go with 30 x 30
 //	int color_value <- 3;
 	rgb color <- #green;
 	float cell_value min: 0.0 max: 3.0 <- 3.0;
+	bool is_free <- true;
 	
 	init {
 //		carrying_capacity <- max_carrying_capacity;
@@ -457,11 +477,19 @@ grid rice_grid width: 10 height: 10 neighbors: 8  { // good to go with 30 x 30
 species Insect {
 	string type;
 	int resistance <- 0;
-	rice_grid plot_grid;
+	//Current cell of the agent
+	rice_grid current_cell;
+	//Evacuation cell of the agent
+	rice_grid target_cell;
+	//List of the cells already passed by the agents and memorised
+	list<rice_grid> memory;
 	
 	init {
-		plot_grid <- one_of(rice_grid);
-		location <- plot_grid.location;
+		// move to one of a grid location
+		current_cell <- one_of(rice_grid);
+		location <- current_cell.location;
+		current_cell.is_free <- false;
+		//write("on init: " + current_cell);
 	}
 	
 	aspect default {
@@ -472,10 +500,10 @@ species Insect {
 species Pest parent:Insect {
 	float reproduction_rate <- 1.33;
 
-	reflex move {
-		plot_grid <- one_of(plot_grid.neighbors);
-		location <- plot_grid.location;
-	}
+//	reflex move {
+//		current_cell <- one_of(current_cell.neighbors);
+//		location <- current_cell.location;
+//	}
 	
 	aspect default {
 		draw square(1) color: #red;
@@ -484,13 +512,20 @@ species Pest parent:Insect {
 
 species Parasitoid parent: Insect {
 	int pest_eaten <- 0;
-	aspect default {
-		draw square(1) color: #black;
-	}
 	
 	reflex move {
-		plot_grid <- one_of(plot_grid.neighbors);
-		location <- plot_grid.location;
+		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
+		//write("current cell: ", tmp_cell);
+		if (tmp_cell != nil) {
+			//write("not nil, so have pest neighbour. " +  tmp_cell);
+			current_cell <- tmp_cell;
+			location <- current_cell.location;
+		} else {
+			//write("nil");
+			// check other location
+			current_cell <- one_of(current_cell.neighbors);
+			location <- current_cell.location;
+		}
 	}
 	
 	reflex eat when: num_pest_eaten_by_parasitoid < potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1] {
@@ -500,18 +535,40 @@ species Parasitoid parent: Insect {
 			num_pest_eaten_by_parasitoid <- num_pest_eaten_by_parasitoid + 1;
 			ask p {
 				number_of_pest <- number_of_pest - 1;
+				current_cell.is_free <- true;
 				do die;
 			}
 			
 		}
 	}
+	
+	aspect default {
+		draw square(1) color: #black;
+	}
+	
 }
 
 species Predator parent: Insect {
 	int pest_eaten <- 0;
+	
+//	reflex move {
+//		current_cell <- one_of(current_cell.neighbors);
+//		location <- current_cell.location;
+//	}
+
 	reflex move {
-		plot_grid <- one_of(plot_grid.neighbors);
-		location <- plot_grid.location;
+		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
+		//write("current cell: ", tmp_cell);
+		if (tmp_cell != nil) {
+			//write("not nil, so have pest neighbour. " +  tmp_cell);
+			current_cell <- tmp_cell;
+			location <- current_cell.location;
+		} else {
+			//write("nil");
+			// check other location
+			current_cell <- one_of(current_cell.neighbors);
+			location <- current_cell.location;
+		}
 	}
 	
 	reflex eat when: num_pest_eaten_by_predator < potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1] {
@@ -521,6 +578,7 @@ species Predator parent: Insect {
 			num_pest_eaten_by_predator <- num_pest_eaten_by_predator + 1;
 			ask p {
 				number_of_pest <- number_of_pest - 1;
+				current_cell.is_free <- true;
 				do die;
 			}
 			
@@ -546,25 +604,53 @@ experiment Experiment type: gui{
 			species Parasitoid;
 			species Predator;
 			//species Farmer;
+			
+				overlay position: { 5, 5 } size: { 180 #px, 160 #px } background: # black transparency: 0.5 border: #black rounded: true
+	            {
+	            	//for each possible type, we draw a square with the corresponding color and we write the name of the type
+	                float y <- 30#px;
+	
+	                draw square(10#px) at: { 20#px, y } color:PREDATOR_COLOR  border: #white;
+	                draw "Predator" at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                y <- y + 25#px;
+	                
+	                draw square(10#px) at: { 20#px, y } color:PARASITOID_COLOR  border: #white;
+	                draw "Parasitoid" at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                y <- y + 25#px;
+	                
+	                draw square(10#px) at: { 20#px, y } color:PEST_COLOR  border: #white;
+	                draw "PEST" at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                y <- y + 25#px;
+	                
+	//                draw square(10#px) at: { 20#px, y } color:IMMUNE_COLOR  border: #white;
+	                draw "Cycle: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                y <- y + 25#px;
+	                
+	                draw "Treatment: " + treatments[cycle_count] at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                y <- y + 25#px;
+				
+			}
+		
 		}
 		
 		// every 28 cycles equal to one cycle count ( a week)
 		display plots type: 2d refresh:every(28#cycles){
 				chart "Population Dynamics" type: series {
-				    data "Pest" value: length(Pest);//[cycle_count, length(Pest)] color: #red;
-				    data "Parasitoid" value: length(Parasitoid);//[cycle_count, length(Parasitoid)] color: #blue;
-				    data "Predator" value: length(Predator);//[cycle_count, length(Predator)] color: #yellow;
+				    data "Pest" value: length(Pest) color: PEST_COLOR;//[cycle_count, length(Pest)] color: #red;
+				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;//[cycle_count, length(Parasitoid)] color: #blue;
+				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;//[cycle_count, length(Predator)] color: #yellow;
+				}
+		}
+		// TODO: init this two kind of variable in init
+		// change this to on init cause it needs to start the programme
+		display plot_crop_yield_each_cycle type: 2d refresh:every(28#cycles){ // skip(1#cycles)
+				chart "Crop Yield" type: series {
+				    data "Real Yield (tons)" value: dynamic_yields[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+				    //data "Predator" value: length(Predator) color: PREDATOR_COLOR;//[cycle_count, length(Predator)] color: #yellow;
 				}
 		}
 		
-//		display crop_yield type: 2d refresh:every(28#cycles){
-//				chart "Population Dynamics" type: series {
-//				    data "Real Yield (tons)" value: real_yields;//[cycle_count, length(Pest)] color: #red;
-//				    data "Parasitoid" value: length(Parasitoid);//[cycle_count, length(Parasitoid)] color: #blue;
-//				    data "Predator" value: length(Predator);//[cycle_count, length(Predator)] color: #yellow;
-//				}
-//
-//		}
 		
 	}
 	
