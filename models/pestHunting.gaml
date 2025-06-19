@@ -21,7 +21,7 @@ global {
 	int number_of_pest <- 0; // first step should be 0
 	int number_of_parasitoids <- 25;
 	int number_of_predator <- 7;
-	float step <- 6 #h;
+	float step <- 6 #h; // TODO: reduce this speed
 	float hour <- 0.0;
 	int day <- 0;
 	int cycle_count <- 0; // cycle count
@@ -69,12 +69,16 @@ global {
 	list<int> predators <- [7];
 	list<int> parasitoids <- [25];
 	list<int> total_potential_pests_eaten <- [];
-	list<int> field_cases <- [300];
+	list<int> field_cases <- [];
 	list<float> dynamic_yields <- [];
 	list<float> potential_yields <- [];
 	list<float> real_yield_in_tons <- [];
 	list<float> max_dynamic_yields <- [];
 	list<int> remove_sticky_notes <- [];
+	
+	// Rice field
+	int rice_field_width <- 10;
+	int rice_field_height <- 10;
 	
 	init {
 		create Pest  number: number_of_pest {
@@ -108,8 +112,9 @@ global {
 		ask rice_grid {
 			do change_color;
 		}
-		//		add parasitoids[0] * normal_consumption_rate_parasitoid to: potential_pests_eaten_by_parasitoids;
-		//		add predators[0] * normal_consumption_rate_predator to: potential_pests_eaten_by_predators;
+		add 0 to: treatments;
+		do define_field_case;
+		do sequential_var_calc;
 	}
 	
 	reflex check_date_time {
@@ -133,6 +138,12 @@ global {
 	reflex stop_experiment when: cycle_count = 13 {
 		write("Rice harvested, stop experiment.");
    		do pause;
+	}
+	
+	action define_field_case {
+		// use the dynamic field case base on rice grid
+		add rice_field_width * rice_field_height * 3 to: field_cases;
+		write("field cases: " + field_cases);
 	}
 	
 	action calc_dynamic_yield {
@@ -308,7 +319,7 @@ global {
 	}
 	
 	action calc_potential_yield {
-		add field_cases[length(field_cases) - 1] / 300 to: potential_yields;
+		add field_cases[length(field_cases) - 1] / field_cases[0] to: potential_yields;
 	}
 	
 	action calc_real_yield_in_tons {
@@ -359,7 +370,29 @@ global {
 //		}
 	}
 	
-	reflex farmer_decision_to_treatment when: !is_farmer_decided {
+	action sequential_var_calc{
+		// independant var
+		do calc_dynamic_yield;
+		// structure or dependent variables
+		do update_predators;
+		do update_potential_pests_eaten_by_predators;
+		do update_potential_pests_eaten_by_parasitoids;
+		do update_total_potential_pest_eaten;
+		do update_total_pest_eaten;
+		do update_parasitoids;
+		do update_pest_non_resistant_and_relevant_fields;
+		do update_pest_resistant;
+		do update_pest_total;
+		do update_predation_rate;
+		do calc_field_case;
+		do calc_potential_yield;
+		do calc_real_yield_in_tons;
+		do calc_max_dynamic_yield;
+		do calc_sticky_notes_need_to_remove;
+		is_farmer_decided <- true;
+	}
+	
+	reflex farmer_decision_to_treatment when: !is_farmer_decided and cycle_count > 0 {
 		write("cycle_count: " + cycle_count);
 		/*if (number_of_pest > 30) {
 			write("Farmer decided to spray on crop (mark as 1).");
@@ -371,7 +404,7 @@ global {
 			write("treatments: " + treatments);
 		}*/
 		// test with apply all treatment
-		if (cycle_count = 0 or cycle_count = 13) {
+		if (cycle_count = 13) {
 			add 0 to: treatments;
 		} else {
 			bool confirm <- user_confirm("Confirm","Please confirm, Would you spray or not?");
@@ -418,7 +451,7 @@ global {
 	
 }
 
-grid rice_grid width: 10 height: 10 neighbors: 8  { // good to go with 30 x 30
+grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8  { // good to go with 30 x 30
 //	rgb color <- #blue;
 //	float carrying_capacity;
 //	float biomass;
@@ -475,14 +508,15 @@ grid rice_grid width: 10 height: 10 neighbors: 8  { // good to go with 30 x 30
 }
 
 species Insect {
+	// TODO: add insect speed
 	string type;
 	int resistance <- 0;
 	//Current cell of the agent
 	rice_grid current_cell;
 	//Evacuation cell of the agent
-	rice_grid target_cell;
+	//rice_grid target_cell;
 	//List of the cells already passed by the agents and memorised
-	list<rice_grid> memory;
+	//list<rice_grid> memory;
 	
 	init {
 		// move to one of a grid location
@@ -597,6 +631,9 @@ species Farmer {
 }
 
 experiment Experiment type: gui{
+	parameter "Width of rice field" var: rice_field_width <- 10;
+	parameter "Height of rice field" var: rice_field_height <- 10;
+	
 	output {
 		display riceFeild type: java2D{
 			grid rice_grid border: #lightgray;// lines: #black;
@@ -611,15 +648,15 @@ experiment Experiment type: gui{
 	                float y <- 30#px;
 	
 	                draw square(10#px) at: { 20#px, y } color:PREDATOR_COLOR  border: #white;
-	                draw "Predator" at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                draw "Predator " + '(' + length(Predator) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
 	                y <- y + 25#px;
 	                
 	                draw square(10#px) at: { 20#px, y } color:PARASITOID_COLOR  border: #white;
-	                draw "Parasitoid" at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                draw "Parasitoid (" + length(Parasitoid) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
 	                y <- y + 25#px;
 	                
 	                draw square(10#px) at: { 20#px, y } color:PEST_COLOR  border: #white;
-	                draw "PEST" at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                draw "PEST (" + length(Pest) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
 	                y <- y + 25#px;
 	                
 	//                draw square(10#px) at: { 20#px, y } color:IMMUNE_COLOR  border: #white;
@@ -639,13 +676,14 @@ experiment Experiment type: gui{
 				    data "Pest" value: length(Pest) color: PEST_COLOR;//[cycle_count, length(Pest)] color: #red;
 				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;//[cycle_count, length(Parasitoid)] color: #blue;
 				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;//[cycle_count, length(Predator)] color: #yellow;
+				    data "Treatment" value: treatments[cycle_count] * 50 color: #blue style: dot;
 				}
 		}
-		// TODO: init this two kind of variable in init
+		
 		// change this to on init cause it needs to start the programme
 		display plot_crop_yield_each_cycle type: 2d refresh:every(28#cycles){ // skip(1#cycles)
 				chart "Crop Yield" type: series {
-				    data "Real Yield (tons)" value: dynamic_yields[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+				    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				    //data "Predator" value: length(Predator) color: PREDATOR_COLOR;//[cycle_count, length(Predator)] color: #yellow;
 				}
