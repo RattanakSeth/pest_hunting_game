@@ -21,12 +21,12 @@ global {
 	int number_of_pest <- 0; // first step should be 0
 	int number_of_parasitoids <- 25;
 	int number_of_predator <- 7;
-	float step <- 6 #h; // TODO: reduce this speed
+	float step <- 3 #h; // TODO: reduce this speed
 	float hour <- 0.0;
 	int day <- 0;
 	int cycle_count <- 0; // cycle count
 	int cycle <- 0;
-	float per_cycle_count <- 24 / (step/3600) * 7;
+	int per_cycle_count <- int(24 / (step/3600) * 7);
 	
 	// variable renew to zero for every each cycle_count count
 	int num_pest_eaten_by_predator <- 0;
@@ -102,12 +102,12 @@ global {
 		
 		// initial variable
 		do initialise_variable;
-		write("cycle: " + cycle);
+		//write("cycle: " + cycle);
 	}
 	
 	action initialise_variable {
 		// only cycle_count one
-		write("start initialise vairable now: " + per_cycle_count);
+		write("start initialise vairable now");
 		
 		ask rice_grid {
 			do change_color;
@@ -136,6 +136,7 @@ global {
 	}
 	
 	reflex stop_experiment when: cycle_count = 13 {
+		// TODO: popup result on cycle 13 
 		write("Rice harvested, stop experiment.");
    		do pause;
 	}
@@ -266,6 +267,10 @@ global {
 	
 	action renew_variable_each_cycle_count {
 		// this function use for renewing variable to zero every each cycle_count count
+		write("num_pest_eaten_by_parasitoid: " + num_pest_eaten_by_parasitoid);
+		write("max : " + potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1]);
+		write("num_pest_eaten_by_predator: " + num_pest_eaten_by_predator);
+		write("max: " + potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1]);
 		num_pest_eaten_by_parasitoid <- 0;
 		num_pest_eaten_by_predator <- 0;
 	}
@@ -323,7 +328,9 @@ global {
 	}
 	
 	action calc_real_yield_in_tons {
-		add field_cases[length(field_cases)-1] * dynamic_yields[length(dynamic_yields) - 1] * 5 / (100 * 300) to: real_yield_in_tons;
+		// TODO: 300 might a rice field case so that we neeed to change it dynamics
+		int begin_field_case <- rice_field_width * rice_field_height * 3;
+		add field_cases[length(field_cases)-1] * dynamic_yields[length(dynamic_yields) - 1] * 5 / (100 * begin_field_case) to: real_yield_in_tons;
 	}
 	
 	action calc_max_dynamic_yield {
@@ -357,17 +364,9 @@ global {
 							do change_color;
 						}
 					}
-//					write("rp: " + cellValue);
 				}
 			}
 		}
-		
-		
-		// ask rice grid to remove sticky notes
-		
-//		ask rice_grid {
-//			
-//		}
 	}
 	
 	action sequential_var_calc{
@@ -404,7 +403,8 @@ global {
 			write("treatments: " + treatments);
 		}*/
 		// test with apply all treatment
-		if (cycle_count = 13) {
+		if (cycle_count = 12) {
+			// Harvest
 			add 0 to: treatments;
 		} else {
 			bool confirm <- user_confirm("Confirm","Please confirm, Would you spray or not?");
@@ -434,7 +434,7 @@ global {
 	}
 	
 	reflex check {
-			write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
+			/*write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
 			write("predator each cycle_count: " + predators);
 			write("potential pest eaten by predators: " + potential_pests_eaten_by_predators);
 			write("totoal pest eaten: " + total_pest_eaten);
@@ -446,7 +446,7 @@ global {
 			write("max dynamic_yield: " + max_dynamic_yields);
 			write("number of predators: " + length(Predator));
 			write("number of parasitoid: " + length(Parasitoid));
-			write("number of pest: " + length(Pest));
+			write("number of pest: " + length(Pest));*/
 	}
 	
 }
@@ -508,7 +508,6 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8  {
 }
 
 species Insect {
-	// TODO: add insect speed
 	string type;
 	int resistance <- 0;
 	//Current cell of the agent
@@ -517,13 +516,23 @@ species Insect {
 	//rice_grid target_cell;
 	//List of the cells already passed by the agents and memorised
 	//list<rice_grid> memory;
+	float speed <- 20 #km/#h;
 	
 	init {
 		// move to one of a grid location
-		current_cell <- one_of(rice_grid);
+		rice_grid tmpCell <- one_of(rice_grid where(each.is_free = true));
+		if (tmpCell != nil) {
+			current_cell <- tmpCell;
+		} else {
+			current_cell <- one_of(rice_grid);
+		}
 		location <- current_cell.location;
 		current_cell.is_free <- false;
-		//write("on init: " + current_cell);
+	}
+	
+	reflex move {
+		current_cell <- one_of(current_cell.neighbors);
+		location <- current_cell.location;
 	}
 	
 	aspect default {
@@ -532,7 +541,7 @@ species Insect {
 }
 
 species Pest parent:Insect {
-	float reproduction_rate <- 1.33;
+	//float reproduction_rate <- 1.33;
 
 //	reflex move {
 //		current_cell <- one_of(current_cell.neighbors);
@@ -549,22 +558,30 @@ species Parasitoid parent: Insect {
 	
 	reflex move {
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
-		//write("current cell: ", tmp_cell);
+		list pest_on_grid <- agents_overlapping(current_cell); //current_cell overlap Pest;
+		if (length(pest_on_grid) = 1) {
+			// current cell will be a previous cell
+			current_cell.is_free <- true;
+		}
 		if (tmp_cell != nil) {
 			//write("not nil, so have pest neighbour. " +  tmp_cell);
 			current_cell <- tmp_cell;
 			location <- current_cell.location;
+			current_cell.is_free <- false;
 		} else {
 			//write("nil");
 			// check other location
+			// current_cell now
 			current_cell <- one_of(current_cell.neighbors);
 			location <- current_cell.location;
+			current_cell.is_free <- false;
 		}
 	}
 	
 	reflex eat when: num_pest_eaten_by_parasitoid < potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
 		loop p over: insectList {
+			if (num_pest_eaten_by_parasitoid = potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1]) {break;}
 			pest_eaten <- pest_eaten + 1;
 			num_pest_eaten_by_parasitoid <- num_pest_eaten_by_parasitoid + 1;
 			ask p {
@@ -608,6 +625,7 @@ species Predator parent: Insect {
 	reflex eat when: num_pest_eaten_by_predator < potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
 		loop p over: insectList {
+			if (num_pest_eaten_by_predator = potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1]) {break;}
 			pest_eaten <- pest_eaten + 1;
 			num_pest_eaten_by_predator <- num_pest_eaten_by_predator + 1;
 			ask p {
@@ -671,7 +689,7 @@ experiment Experiment type: gui{
 		}
 		
 		// every 28 cycles equal to one cycle count ( a week)
-		display plots type: 2d refresh:every(28#cycles){
+		display plots type: 2d refresh:every(per_cycle_count#cycles){
 				chart "Population Dynamics" type: series {
 				    data "Pest" value: length(Pest) color: PEST_COLOR;//[cycle_count, length(Pest)] color: #red;
 				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;//[cycle_count, length(Parasitoid)] color: #blue;
@@ -681,7 +699,7 @@ experiment Experiment type: gui{
 		}
 		
 		// change this to on init cause it needs to start the programme
-		display plot_crop_yield_each_cycle type: 2d refresh:every(28#cycles){ // skip(1#cycles)
+		display plot_crop_yield_each_cycle type: 2d refresh:every(per_cycle_count#cycles){ // skip(1#cycles)
 				chart "Crop Yield" type: series {
 				    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
