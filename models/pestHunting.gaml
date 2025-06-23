@@ -139,6 +139,20 @@ global {
 		// TODO: popup result on cycle 13 
 		write("Rice harvested, stop experiment.");
    		do pause;
+//   		bool confirm <- user_confirm("Confirm","
+//				Game Simulation has finished. \n
+//				" + "Max yeild: " + max_dynamic_yields[length(max_dynamic_yields) - 1]
+//			+ '\n' + 'Real yiel in tons: '+ real_yield_in_tons[length(real_yield_in_tons) - 1]);
+		// TODO: STORE DATA AS CSV FILE
+	}
+	
+	action store_data_to_csv {
+//		ask bug {
+//			// save the values of the variables name, speed and size to the csv file; the rewrite facet is set to false to continue to write in the same file
+//			save [name,speed, size] to: "../results/bug.csv" format:"csv" rewrite: false;
+//			// save all the attributes values of the bug agents in a file. The file is overwritten at every save
+//			save bug to: "../results/bug_agents.csv" format:"csv" rewrite: true;
+//		}
 	}
 	
 	action define_field_case {
@@ -261,16 +275,16 @@ global {
 		// update pest was eaten by to list
 		add num_pest_eaten_by_parasitoid to: potential_pests_eaten_by_parasitoids;
 		add num_pest_eaten_by_predator to: potential_pests_eaten_by_predators;
-		write("pests_eaten_by_parasitoids: " + potential_pests_eaten_by_parasitoids);
-		write("pests_eaten_by_predators: " + potential_pests_eaten_by_predators);
+//		write("pests_eaten_by_parasitoids: " + potential_pests_eaten_by_parasitoids);
+//		write("pests_eaten_by_predators: " + potential_pests_eaten_by_predators);
 	}
 	
 	action renew_variable_each_cycle_count {
 		// this function use for renewing variable to zero every each cycle_count count
-		write("num_pest_eaten_by_parasitoid: " + num_pest_eaten_by_parasitoid);
-		write("max : " + potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1]);
-		write("num_pest_eaten_by_predator: " + num_pest_eaten_by_predator);
-		write("max: " + potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1]);
+//		write("num_pest_eaten_by_parasitoid: " + num_pest_eaten_by_parasitoid);
+//		write("max : " + potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1]);
+//		write("num_pest_eaten_by_predator: " + num_pest_eaten_by_predator);
+//		write("max: " + potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1]);
 		num_pest_eaten_by_parasitoid <- 0;
 		num_pest_eaten_by_predator <- 0;
 	}
@@ -388,10 +402,9 @@ global {
 		do calc_real_yield_in_tons;
 		do calc_max_dynamic_yield;
 		do calc_sticky_notes_need_to_remove;
-		is_farmer_decided <- true;
 	}
 	
-	reflex farmer_decision_to_treatment when: !is_farmer_decided and cycle_count > 0 {
+	reflex farmer_decision_to_treatment when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
 		write("cycle_count: " + cycle_count);
 		/*if (number_of_pest > 30) {
 			write("Farmer decided to spray on crop (mark as 1).");
@@ -434,7 +447,7 @@ global {
 	}
 	
 	reflex check {
-			/*write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
+			write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
 			write("predator each cycle_count: " + predators);
 			write("potential pest eaten by predators: " + potential_pests_eaten_by_predators);
 			write("totoal pest eaten: " + total_pest_eaten);
@@ -446,7 +459,7 @@ global {
 			write("max dynamic_yield: " + max_dynamic_yields);
 			write("number of predators: " + length(Predator));
 			write("number of parasitoid: " + length(Parasitoid));
-			write("number of pest: " + length(Pest));*/
+			write("number of pest: " + length(Pest));
 	}
 	
 }
@@ -530,10 +543,10 @@ species Insect {
 		current_cell.is_free <- false;
 	}
 	
-	reflex move {
+	/*reflex move {
 		current_cell <- one_of(current_cell.neighbors);
 		location <- current_cell.location;
-	}
+	}*/
 	
 	aspect default {
 		draw circle(1) color: #red;
@@ -556,7 +569,7 @@ species Pest parent:Insect {
 species Parasitoid parent: Insect {
 	int pest_eaten <- 0;
 	
-	reflex move {
+	/*reflex move {
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
 		list pest_on_grid <- agents_overlapping(current_cell); //current_cell overlap Pest;
 		if (length(pest_on_grid) = 1) {
@@ -576,7 +589,7 @@ species Parasitoid parent: Insect {
 			location <- current_cell.location;
 			current_cell.is_free <- false;
 		}
-	}
+	}*/
 	
 	reflex eat when: num_pest_eaten_by_parasitoid < potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
@@ -607,7 +620,7 @@ species Predator parent: Insect {
 //		location <- current_cell.location;
 //	}
 
-	reflex move {
+	/*reflex move {
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
 		//write("current cell: ", tmp_cell);
 		if (tmp_cell != nil) {
@@ -620,7 +633,7 @@ species Predator parent: Insect {
 			current_cell <- one_of(current_cell.neighbors);
 			location <- current_cell.location;
 		}
-	}
+	}*/
 	
 	reflex eat when: num_pest_eaten_by_predator < potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
@@ -691,10 +704,10 @@ experiment Experiment type: gui{
 		// every 28 cycles equal to one cycle count ( a week)
 		display plots type: 2d refresh:every(per_cycle_count#cycles){
 				chart "Population Dynamics" type: series {
-				    data "Pest" value: length(Pest) color: PEST_COLOR;//[cycle_count, length(Pest)] color: #red;
-				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;//[cycle_count, length(Parasitoid)] color: #blue;
-				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;//[cycle_count, length(Predator)] color: #yellow;
-				    data "Treatment" value: treatments[cycle_count] * 50 color: #blue style: dot;
+				    data "Pest" value: length(Pest) color: PEST_COLOR;
+				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
+				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
+				    data "Treatment" value: treatments[cycle_count] * 50 color: #blue style: dot; // display dot as a treatment in value 50
 				}
 		}
 		
