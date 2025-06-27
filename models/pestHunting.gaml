@@ -64,8 +64,8 @@ global {
 	//list<int> pest_population <- []; // pest_total
 	list<float> potential_pests_eaten_by_parasitoids <- []; // maximum amount of pest eaten by parasitoids
 	list<float> potential_pests_eaten_by_predators <- []; // maximum of predators to eat pest
-	list<int> total_pest_eaten <- []; // program start need this
-	list<int> pests_total <- [0]; // program start need this
+	list<float> total_pest_eaten <- []; // program start need this
+	list<float> pests_total <- []; // program start need this
 	list<float> predators <- [7.00];
 	list<float> parasitoids <- [];
 	list<float> total_potential_pests_eaten <- [];
@@ -168,19 +168,58 @@ global {
 		}
 		string data_string <- ""; 
 
-		loop i from: 0 to: 12 {
+		/*loop i from: 0 to: 12 {
 			int cycles <- i;
-			int pest_total <- pests_total[i];
+			//int pest_total <- round(pests_total[i]);
+			float pest_total <- pests_total[i];
 			float pestResistant <- pest_resistants[i];
 			float pestNonResistant <- pest_non_resistants[i];
-			int potentialParasitoid <- round(potential_parasitoids[i]);
-			int parasitoid <- round(parasitoids[i]);
-			int potentialPestEatenByParasitoid <- round(potential_pests_eaten_by_parasitoids[i]);
-			int potentialPredator <- round(potential_predators[i]);
+			//int potentialParasitoid <- round(potential_parasitoids[i]);
+			float potentialParasitoid <- potential_parasitoids[i];
+			//int parasitoid <- round(parasitoids[i]);
+			float parasitoid <- parasitoids[i];
+			//int potentialPestEatenByParasitoid <- round(potential_pests_eaten_by_parasitoids[i]);
+			float potentialPestEatenByParasitoid <- potential_pests_eaten_by_parasitoids[i];
+			//int potentialPredator <- round(potential_predators[i]);
+			float potentialPredator <- potential_predators[i];
 			int predator <- round(predators[i]);
 			int potentialPestEatenByPredator <- round(potential_pests_eaten_by_predators[i]);
 			int totalPotentialPestEaten <- round(total_potential_pests_eaten[i]);
 			int totalPestEaten <- total_pest_eaten[i];
+			float predationRate <- predation_rates[i];
+			int fieldCase <- field_cases[i];
+			float dynamicYield <- dynamic_yields[i];
+			float potentialYield <- potential_yields[i];
+			float realYield <- real_yield_in_tons[i];
+			int treatment <- treatments[i];
+			float maxDynamicYield <- max_dynamic_yields[i];
+			
+			save [cycles, pest_total, pestResistant, pestNonResistant, potentialParasitoid, 
+				parasitoid, potentialPestEatenByParasitoid, potentialPredator, predator, potentialPestEatenByPredator,
+				totalPotentialPestEaten, totalPestEaten, predationRate, fieldCase, dynamicYield, potentialYield,
+				realYield, treatment, maxDynamicYield
+			] to: "../results/calc.csv" format:"csv" rewrite: false;
+		}*/
+		
+		// use all to float
+		loop i from: 0 to: 12 {
+			int cycles <- i;
+			//int pest_total <- round(pests_total[i]);
+			float pest_total <- pests_total[i];
+			float pestResistant <- pest_resistants[i];
+			float pestNonResistant <- pest_non_resistants[i];
+			//int potentialParasitoid <- round(potential_parasitoids[i]);
+			float potentialParasitoid <- potential_parasitoids[i];
+			//int parasitoid <- round(parasitoids[i]);
+			float parasitoid <- parasitoids[i];
+			//int potentialPestEatenByParasitoid <- round(potential_pests_eaten_by_parasitoids[i]);
+			float potentialPestEatenByParasitoid <- potential_pests_eaten_by_parasitoids[i];
+			//int potentialPredator <- round(potential_predators[i]);
+			float potentialPredator <- potential_predators[i];
+			float predator <- predators[i];
+			float potentialPestEatenByPredator <- potential_pests_eaten_by_predators[i];
+			float totalPotentialPestEaten <- total_potential_pests_eaten[i];
+			float totalPestEaten <- total_pest_eaten[i];
 			float predationRate <- predation_rates[i];
 			int fieldCase <- field_cases[i];
 			float dynamicYield <- dynamic_yields[i];
@@ -225,7 +264,7 @@ global {
 		if (cycle_count = 12) {
 			add dynamic_yields[length(dynamic_yields) - 1] to: dynamic_yields; // copy previous to last cycle
 		} else {
-			add (cycle_count * 100/11) to: dynamic_yields;
+			add (cycle_count * 100/11) with_precision 2 to: dynamic_yields;
 		}
 	}
 	
@@ -262,14 +301,14 @@ global {
 				}
 			}
 			
-			write("predators: " + predators);
-			write("length of it; " + length(Predator));
+//			write("predators: " + predators);
+//			write("length of it; " + length(Predator));
 		}
 	}
 	
 	action update_predation_rate {
 		float tmp_predation_rate <- pests_total[length(pests_total)-1] = 0 ? 0 : (total_pest_eaten[length(total_pest_eaten)-1]/ pests_total[length(pests_total)-1]);
-		add tmp_predation_rate to: predation_rates;
+		add tmp_predation_rate with_precision 2 to: predation_rates;
 		//write("tmp predation rate: " + tmp_predation_rate);
 		//addpredation_rates
 	}
@@ -299,7 +338,7 @@ global {
 //				sum_of_prev_treatment <- sum_of_prev_treatment + treatments[i];
 //			}
 			pest_non_resistant <- pest_non_resistant * (1 - pev_predation_rate) * (sum_first_prev_treatment = 0 ? normal_production_rate_pest : normal_production_rate_pesticide_pest) * (prev_treatment = 1 ? normal_survival_pesticide_pest : 1) + 9.8;
-			add pest_non_resistant to: pest_non_resistants;
+			add pest_non_resistant with_precision 2 to: pest_non_resistants;
 		}
 	}
 	
@@ -314,16 +353,20 @@ global {
 		} else if (cycle_count > 2) {
 			pest_resistant <- pest_resistant * (1 - predation_rates[length(predation_rates)-2]) * (get_total_prev_treatment() > 1 ? resistance_reproduction_rate_pesticide_pest : resistance_reproduction_pest) + 0.2;
 			// add pest resistant to list
-			add pest_resistant to: pest_resistants; 
+			add pest_resistant with_precision 2 to: pest_resistants; 
 		}
 	}
 	
 	action update_pest_total {
-		number_of_pest <- int(pest_resistants[length(pest_resistants) - 1] + pest_non_resistants[length(pest_non_resistants) - 1]);
+		float num_pest <- (pest_resistants[length(pest_resistants) - 1] + pest_non_resistants[length(pest_non_resistants) - 1]) with_precision 2;
 		//add number_of_pest to: pest_population; // store in list
-		add number_of_pest to: pests_total;
+		add num_pest to: pests_total;
 		//create Pest number: number_of_pest;
-		int pest_amount <- pests_total[length(pests_total) - 1] - pests_total[length(pests_total) - 2];
+		int pest_amount <- round(pests_total[cycle_count]);
+		if (cycle_count > 0) {
+			pest_amount <- round(pests_total[length(pests_total) - 1]) - round(pests_total[length(pests_total) - 2]);
+		}
+		
 		if (pest_amount > 0) {
 			create Pest number: pest_amount;
 		} else if (pest_amount < 0) {
@@ -376,26 +419,28 @@ global {
 	action update_parasitoids {
 		// first init or cycle_count zero will be 25
 		// we treated or sprayed
+		write("cycle " + cycle_count + "not return");
 		if (cycle_count = 0) {
 			add 25 to: parasitoids;
-			return;
-		}
-	
-		float prev_total_potential_pests_eaten <- total_potential_pests_eaten[length(total_potential_pests_eaten)-1];
-		int prev_total_pest_eaten <- total_pest_eaten[length(total_pest_eaten) - 1];
-		float tmp_parasitoid <- (treatments[length(treatments) - 2] = 1 ? normal_survival_pesticide_parasitoid : 1) * parasitoids[length(parasitoids) - 1] * ((prev_total_potential_pests_eaten = prev_total_pest_eaten) ? normal_reproduction_rate_parasitoid : (((normal_reproduction_rate_parasitoid - 1) * prev_total_pest_eaten / prev_total_potential_pests_eaten) + 1));
-		add tmp_parasitoid with_precision 2 to: parasitoids;
-		int parasitoid_amount <- round(parasitoids[length(parasitoids) - 1]) - round(parasitoids[length(parasitoids) - 2]);
-		if (parasitoid_amount > 0) {
-			create Parasitoid number: parasitoid_amount;
-		} else if (parasitoid_amount < 0) {
-			list<Parasitoid> selectedParasitoid <- abs(parasitoid_amount) among Parasitoid;
-			loop p over: selectedParasitoid {
-				ask p {
-					do die;
+		} else {
+			float prev_total_potential_pests_eaten <- total_potential_pests_eaten[length(total_potential_pests_eaten)-1];
+			float prev_total_pest_eaten <- total_pest_eaten[length(total_pest_eaten) - 1];
+			float tmp_parasitoid <- (treatments[length(treatments) - 2] = 1 ? normal_survival_pesticide_parasitoid : 1) * parasitoids[length(parasitoids) - 1] * ((prev_total_potential_pests_eaten = prev_total_pest_eaten) ? normal_reproduction_rate_parasitoid : (((normal_reproduction_rate_parasitoid - 1) * prev_total_pest_eaten / prev_total_potential_pests_eaten) + 1));
+			add tmp_parasitoid with_precision 2 to: parasitoids;
+			int parasitoid_amount <- round(parasitoids[length(parasitoids) - 1]) - round(parasitoids[length(parasitoids) - 2]);
+			if (parasitoid_amount > 0) {
+				create Parasitoid number: parasitoid_amount;
+			} else if (parasitoid_amount < 0) {
+				list<Parasitoid> selectedParasitoid <- abs(parasitoid_amount) among Parasitoid;
+				loop p over: selectedParasitoid {
+					ask p {
+						do die;
+					}
 				}
 			}
 		}
+		
+		
 //		create Parasitoid number: tmp_parasitoid;
 		
 //		write("number of parasitoid: " + tmp_parasitoid);
@@ -405,12 +450,12 @@ global {
 	}
 	
 	action calc_potential_yield {
-		add field_cases[length(field_cases) - 1] / field_cases[0] to: potential_yields;
+		add (field_cases[length(field_cases) - 1] / field_cases[0]) with_precision 2 to: potential_yields;
 	}
 	
 	action calc_real_yield_in_tons {
 		int begin_field_case <- rice_field_width * rice_field_height * 3;
-		add field_cases[length(field_cases)-1] * dynamic_yields[length(dynamic_yields) - 1] * 5 / (100 * begin_field_case) to: real_yield_in_tons;
+		add (field_cases[length(field_cases)-1] * dynamic_yields[length(dynamic_yields) - 1] * 5 / (100 * begin_field_case)) with_precision 2 to: real_yield_in_tons;
 	}
 	
 	action calc_max_dynamic_yield {
@@ -422,8 +467,8 @@ global {
 		int tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
 		add tmp_remove_rice_yield to: remove_sticky_notes;
 		list<rice_grid> rice_pest <- rice_grid where(length(Pest) > 0 and each.cell_value > 0);//select rice_grid where(each.)
-		write("tmp remove sticky note: " + tmp_remove_rice_yield);
-		write("rice pest: " + rice_pest);
+		//write("tmp remove sticky note: " + tmp_remove_rice_yield);
+		//write("rice pest: " + rice_pest);
 		if (abs(tmp_remove_rice_yield) != 0) {
 			if (length(rice_pest) > 0) {
 				float tmp_remove <- float(abs(tmp_remove_rice_yield));
@@ -452,20 +497,26 @@ global {
 	action sequential_var_calc{
 		// independant var
 		do calc_dynamic_yield;
+		
 		// structure or dependent variables
 		do update_predators;
 		do calc_potential_predator;
 		do update_potential_pests_eaten_by_predators;
+		
 		// start with parasitoid
 		do update_parasitoids;
 		do update_potential_pests_eaten_by_parasitoids;
 		do update_total_potential_pest_eaten;
-		do update_total_pest_eaten;
-		do calc_potential_parasitoid;
-		// resistant
+		
+		// pest
 		do update_pest_non_resistant_and_relevant_fields;
 		do update_pest_resistant;
 		do update_pest_total;
+		do update_total_pest_eaten;
+		do calc_potential_parasitoid;
+		// resistant
+		
+		// result calculation
 		do update_predation_rate;
 		do calc_field_case;
 		do calc_potential_yield;
