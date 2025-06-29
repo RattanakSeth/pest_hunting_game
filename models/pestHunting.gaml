@@ -168,45 +168,41 @@ global {
 		}
 		string data_string <- ""; 
 
-		/*loop i from: 0 to: 12 {
+		// stick to the excel
+		loop i from: 0 to: 12 {
 			int cycles <- i;
-			//int pest_total <- round(pests_total[i]);
-			float pest_total <- pests_total[i];
-			float pestResistant <- pest_resistants[i];
-			float pestNonResistant <- pest_non_resistants[i];
-			//int potentialParasitoid <- round(potential_parasitoids[i]);
-			float potentialParasitoid <- potential_parasitoids[i];
-			//int parasitoid <- round(parasitoids[i]);
-			float parasitoid <- parasitoids[i];
-			//int potentialPestEatenByParasitoid <- round(potential_pests_eaten_by_parasitoids[i]);
-			float potentialPestEatenByParasitoid <- potential_pests_eaten_by_parasitoids[i];
-			//int potentialPredator <- round(potential_predators[i]);
-			float potentialPredator <- potential_predators[i];
+			int pest_total <- round(pests_total[i]);
+			float pestResistant <- pest_resistants[i] with_precision 1;
+			int pestNonResistant <- round(pest_non_resistants[i]);
+			int potentialParasitoid <- round(potential_parasitoids[i]);
+			int parasitoid <- round(parasitoids[i]);
+			int potentialPestEatenByParasitoid <- round(potential_pests_eaten_by_parasitoids[i]);
+			int potentialPredator <- round(potential_predators[i]);
 			int predator <- round(predators[i]);
 			int potentialPestEatenByPredator <- round(potential_pests_eaten_by_predators[i]);
 			int totalPotentialPestEaten <- round(total_potential_pests_eaten[i]);
-			int totalPestEaten <- total_pest_eaten[i];
-			float predationRate <- predation_rates[i];
-			int fieldCase <- field_cases[i];
-			float dynamicYield <- dynamic_yields[i];
-			float potentialYield <- potential_yields[i];
-			float realYield <- real_yield_in_tons[i];
+			int totalPestEaten <- round(total_pest_eaten[i]);
+			float predationRate <- predation_rates[i] with_precision 2;
+			int fieldCase <- round(field_cases[i]);
+			float dynamicYield <- dynamic_yields[i] with_precision 2;
+			float potentialYield <- potential_yields[i] with_precision 2;
+			float realYield <- real_yield_in_tons[i] with_precision 2;
 			int treatment <- treatments[i];
-			float maxDynamicYield <- max_dynamic_yields[i];
+			float maxDynamicYield <- max_dynamic_yields[i] with_precision 7;
 			
 			save [cycles, pest_total, pestResistant, pestNonResistant, potentialParasitoid, 
 				parasitoid, potentialPestEatenByParasitoid, potentialPredator, predator, potentialPestEatenByPredator,
 				totalPotentialPestEaten, totalPestEaten, predationRate, fieldCase, dynamicYield, potentialYield,
 				realYield, treatment, maxDynamicYield
 			] to: "../results/calc.csv" format:"csv" rewrite: false;
-		}*/
+		}
 		
 		// use all to float
-		// TODO: change all to float
-		loop i from: 0 to: 12 {
+		// change all to float
+		/*loop i from: 0 to: 12 {
 			int cycles <- i;
 			//int pest_total <- round(pests_total[i]);
-			float pest_total <- pests_total[i] with_precision 2;
+			float pest_total <- pests_total[i];
 			float pestResistant <- pest_resistants[i] with_precision 1;
 			float pestNonResistant <- pest_non_resistants[i] with_precision 2;
 			//int potentialParasitoid <- round(potential_parasitoids[i]);
@@ -223,18 +219,18 @@ global {
 			float totalPestEaten <- total_pest_eaten[i] with_precision 2;
 			float predationRate <- predation_rates[i] with_precision 2;
 			float fieldCase <- field_cases[i] with_precision 2;
-			float dynamicYield <- dynamic_yields[i];
+			float dynamicYield <- dynamic_yields[i] with_precision 2;
 			float potentialYield <- potential_yields[i] with_precision 2;
-			float realYield <- real_yield_in_tons[i];
+			float realYield <- real_yield_in_tons[i] with_precision 2;
 			int treatment <- treatments[i];
-			float maxDynamicYield <- max_dynamic_yields[i];
+			float maxDynamicYield <- max_dynamic_yields[i] with_precision 2;
 			
 			save [cycles, pest_total, pestResistant, pestNonResistant, potentialParasitoid, 
 				parasitoid, potentialPestEatenByParasitoid, potentialPredator, predator, potentialPestEatenByPredator,
 				totalPotentialPestEaten, totalPestEaten, predationRate, fieldCase, dynamicYield, potentialYield,
 				realYield, treatment, maxDynamicYield
 			] to: "../results/calc.csv" format:"csv" rewrite: false;
-		}
+		}*/
 
 	}
 	
@@ -265,14 +261,14 @@ global {
 		if (cycle_count = 12) {
 			add dynamic_yields[length(dynamic_yields) - 1] to: dynamic_yields; // copy previous to last cycle
 		} else {
-			add (cycle_count * 100/11) with_precision 2 to: dynamic_yields;
+			add (cycle_count * 100/11) to: dynamic_yields;
 		}
 	}
 	
 	action calc_field_case {
 		if (cycle_count < 1) {return;}
 		float prev_field_case <- field_cases[length(field_cases) - 1];
-		add (prev_field_case - (pests_total[length(pests_total)-1]/15)) > 0 ? round(prev_field_case - (pests_total[length(pests_total)-1]/15)) : 0 to: field_cases;
+		add (prev_field_case - (pests_total[length(pests_total)-1]/15)) > 0 ? (prev_field_case - (pests_total[length(pests_total)-1]/15)) : 0 to: field_cases;
 	}
 	
 	int get_total_prev_treatment {
@@ -459,11 +455,11 @@ global {
 	
 	action calc_real_yield_in_tons {
 		int begin_field_case <- rice_field_width * rice_field_height * 3;
-		add (field_cases[length(field_cases)-1] * dynamic_yields[length(dynamic_yields) - 1] * 5 / (100 * begin_field_case)) with_precision 2 to: real_yield_in_tons;
+		add (field_cases[length(field_cases)-1] * dynamic_yields[length(dynamic_yields) - 1] * 5 / (100 * begin_field_case)) to: real_yield_in_tons;
 	}
 	
 	action calc_max_dynamic_yield {
-		add (5 * dynamic_yields[length(dynamic_yields) - 1] / 100) with_precision 2 to: max_dynamic_yields;
+		add (5 * dynamic_yields[length(dynamic_yields) - 1] / 100) to: max_dynamic_yields;
 	}
 	
 	action calc_sticky_notes_need_to_remove {
