@@ -21,9 +21,9 @@ global {
 	int number_of_pest <- 0; // first step should be 0
 	int number_of_parasitoids <- 25;
 	int number_of_predator <- 7;
-	float step <- 3 #h; // TODO: reduce this speed
-	float hour <- 0.0;
-	int day <- 0;
+	float step <- 1 #week;
+	//float hour <- 0.0;
+	//int day <- 0;
 	int cycle_count <- 0; // cycle count
 	int cycle <- 0;
 	int per_cycle_count <- int(24 / (step/3600) * 7);
@@ -74,7 +74,7 @@ global {
 	list<float> potential_yields <- [];
 	list<float> real_yield_in_tons <- [];
 	list<float> max_dynamic_yields <- [];
-	list<int> remove_sticky_notes <- [];
+	list<float> remove_sticky_notes <- [];
 	list<float> potential_parasitoids <- [];
 	list<float> potential_predators <- [];
 	
@@ -120,45 +120,28 @@ global {
 	}
 	
 	reflex check_date_time {
+		// we did with step (hour, day and week)
+		/*
 		hour <- hour + (step / 3600); // second to hour
-//		write(hour);
 		if (hour mod 24 = 0) {
 			day +<- int(hour / 24);
-			write("day: " + day);
 			if (day mod 7 = 0) { // weekly
 				cycle_count <- cycle_count + 1;
-//				cycle <- cycle + 1;
 				is_farmer_decided <- false;
 				//do update_pests_were_eaten_by;
 				do renew_variable_each_cycle_count;
-				write("\ncycle_count or week: " + cycle_count + '\n');
-//				write("cirlce: " + cycle_count);
 			}
 		}
-	}
-	
-	reflex stop_experiment when: cycle_count = 13 {
-		// TODO: popup result on cycle 13 
-		write("Rice harvested, stop experiment.");
-		do store_data_to_csv;
-   		do pause;
-//   		bool confirm <- user_confirm("Confirm","
-//				Game Simulation has finished. \n
-//				" + "Max yeild: " + max_dynamic_yields[length(max_dynamic_yields) - 1]
-//			+ '\n' + 'Real yiel in tons: '+ real_yield_in_tons[length(real_yield_in_tons) - 1]);
-		// TODO: STORE DATA AS CSV FILE
+		*/
+		
+		// each step is a week
+		cycle_count <- cycle_count + 1;
+		is_farmer_decided <- false;
+		//do update_pests_were_eaten_by;
+		do renew_variable_each_cycle_count;
 	}
 	
 	action store_data_to_csv {
-//		ask bug {
-//			// save the values of the variables name, speed and size to the csv file; the rewrite facet is set to false to continue to write in the same file
-//			save [name,speed, size] to: "../results/bug.csv" format:"csv" rewrite: false;
-//			// save all the attributes values of the bug agents in a file. The file is overwritten at every save
-//			save bug to: "../results/bug_agents.csv" format:"csv" rewrite: true;
-//		}
-//		write("store pest: " + pests_total);
-//		string test <- concatenate(pests_total, ',');
-//		write("test: " + test);
 
 		string calc_file <-"../results/calc.csv"; 
 		if file_exists(calc_file){ 
@@ -268,6 +251,7 @@ global {
 	action calc_field_case {
 		if (cycle_count < 1) {return;}
 		float prev_field_case <- field_cases[length(field_cases) - 1];
+		// need 15 pests to eat one sticky note or yield
 		add (prev_field_case - (pests_total[length(pests_total)-1]/15)) > 0 ? (prev_field_case - (pests_total[length(pests_total)-1]/15)) : 0 to: field_cases;
 	}
 	
@@ -297,9 +281,6 @@ global {
 					}
 				}
 			}
-			
-//			write("predators: " + predators);
-//			write("length of it; " + length(Predator));
 		}
 	}
 	
@@ -326,7 +307,7 @@ global {
 //			add predation_rate to: predation_rates;
 		}
 		else if (cycle_count > 2) {
-			float pev_predation_rate <- predation_rates[length(predation_rates) - 1]; // it will calc after this
+			float prev_predation_rate <- predation_rates[length(predation_rates) - 1]; // it will calc after this
 //			write("predation_rate: " + predation_rate);
 //			write("predation_rates: " + predation_rates);
 			int prev_treatment <- treatments[length(treatments) - 2];
@@ -335,7 +316,7 @@ global {
 //				sum_of_prev_treatment <- sum_of_prev_treatment + treatments[i];
 //			}
 			float prev_pest_non_resistant <- pest_non_resistants[length(pest_non_resistants) - 1];
-			float pest_non_resistant <- prev_pest_non_resistant * (1 - pev_predation_rate) * (sum_first_prev_treatment = 0 ? normal_production_rate_pest : normal_production_rate_pesticide_pest) * (prev_treatment = 1 ? normal_survival_pesticide_pest : 1) + 9.8;
+			float pest_non_resistant <- prev_pest_non_resistant * (1 - prev_predation_rate) * (sum_first_prev_treatment = 0 ? normal_production_rate_pest : normal_production_rate_pesticide_pest) * (prev_treatment = 1 ? normal_survival_pesticide_pest : 1) + 9.8;
 			add pest_non_resistant to: pest_non_resistants;
 		}
 	}
@@ -459,19 +440,21 @@ global {
 	}
 	
 	action calc_max_dynamic_yield {
+		// 5 tons maximum and 100 is percentage
 		add (5 * dynamic_yields[length(dynamic_yields) - 1] / 100) to: max_dynamic_yields;
 	}
 	
 	action calc_sticky_notes_need_to_remove {
 		if (cycle_count < 1) {return;}
-		int tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
+		float tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
 		add tmp_remove_rice_yield to: remove_sticky_notes;
-		list<rice_grid> rice_pest <- rice_grid where(length(Pest) > 0 and each.cell_value > 0);//select rice_grid where(each.)
+		list<rice_grid> rice_pest <-  abs(round(tmp_remove_rice_yield)) among shuffle(rice_grid) where(each.cell_value > 0); //length(Pest) > 0 and 
+		write("length of rice grid: " + length(rice_pest));
 		//write("tmp remove sticky note: " + tmp_remove_rice_yield);
 		//write("rice pest: " + rice_pest);
-		if (abs(tmp_remove_rice_yield) != 0) {
+		if (abs(round(tmp_remove_rice_yield)) != 0) {
 			if (length(rice_pest) > 0) {
-				float tmp_remove <- float(abs(tmp_remove_rice_yield));
+				float tmp_remove <- float(abs(round(tmp_remove_rice_yield)));
 				loop rp over: rice_pest {
 					if (tmp_remove = 0.0) {break;}
 					float cellValue <- rp.cell_value;
@@ -499,6 +482,7 @@ global {
 		do calc_dynamic_yield;
 		
 		// structure or dependent variables
+		// start with predator
 		do update_predators;
 		do calc_potential_predator;
 		do update_potential_pests_eaten_by_predators;
@@ -507,17 +491,18 @@ global {
 		do update_parasitoids;
 		do update_potential_pests_eaten_by_parasitoids;
 		do update_total_potential_pest_eaten;
+		do calc_potential_parasitoid;
 		
 		// pest
 		do update_pest_non_resistant_and_relevant_fields;
 		do update_pest_resistant;
 		do update_pest_total;
 		do update_total_pest_eaten;
-		do calc_potential_parasitoid;
+		//
+		do update_predation_rate;
 		// resistant
 		
 		// result calculation
-		do update_predation_rate;
 		do calc_field_case;
 		do calc_potential_yield;
 		do calc_real_yield_in_tons;
@@ -590,6 +575,21 @@ global {
 		//write("number of pest: " + length(Pest));
 	}
 	
+	reflex stop_experiment when: cycle_count = 12 { 
+		write("Rice harvested, stop experiment.");
+		do store_data_to_csv;
+		do calc_end_result;
+   		do pause;
+	}
+	
+	action calc_end_result {
+		float stickyRemain <- sum(remove_sticky_notes);
+		write("sticky note remaining: " + round(stickyRemain));
+		
+		float finalYield <- 5 * stickyRemain / 300;
+		write("Final yeild (t/ha): " + finalYield);
+	}
+	
 }
 
 grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8  { // good to go with 30 x 30
@@ -606,23 +606,9 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8  {
 //		biomass <- rnd(0, carrying_capacity);
 	}
 	
-//	aspect rice_crop {
-//	//		draw self color:rgb(0, biomass*20, 0);
-////		draw self color: rgb(0, 255 * biomass / max_carrying_capacity, 0) lines: #black;
-//		draw self color: color;
-//	}
-	
-//	action update_color {
-//		if (color_value = 2) {
-//			color <- HEALTHY_COLOR;
-//		} else if (color_value = 1) {
-//			color <- SLIGHTLY_DIMAGE_COLOR;
-//		} else if (color_value = 0) {
-//			color <- HEAVY_DIMAGE_COLOR;
-//		}
-//	}
-	
 	action change_color {
+		// color-term: color-term.com
+		/*
 		if (cell_value = 3) {
 			// Dark Green Background
 			color <- rgb(0, 112, 48);
@@ -644,6 +630,20 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8  {
 		} else if (cell_value = 1) {
 			// Pink Background
 			color <- rgb(255, 199, 206);
+		}
+		*/
+		if (cell_value = 3.0) {
+			// Dark Green Background
+			color <- rgb(0, 112, 48);
+		} else if (cell_value = 2.0) {
+			// Light Green Background
+			color <- rgb(198, 239, 206);
+		} else if (cell_value = 1.0) {
+			// Bright Yellow Background
+			color <- rgb(255, 255, 0);
+		} else if (cell_value = 0.0) {
+			// Brown Background #583927, LEGO Brick
+			color <- rgb(88, 57, 39);
 		}
 	}
 }
@@ -794,7 +794,7 @@ experiment Experiment type: gui{
 	parameter "Height of rice field" var: rice_field_height <- 10;
 	
 	output {
-		display riceFeild type: java2D{
+		display riceField type: java2D{
 			grid rice_grid border: #lightgray;// lines: #black;
 			species Pest;
 			species Parasitoid;
@@ -815,11 +815,11 @@ experiment Experiment type: gui{
 	                y <- y + 25#px;
 	                
 	                draw square(10#px) at: { 20#px, y } color:PEST_COLOR  border: #white;
-	                draw "PEST (" + length(Pest) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                draw "Pest (" + length(Pest) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
 	                y <- y + 25#px;
 	                
 	//                draw square(10#px) at: { 20#px, y } color:IMMUNE_COLOR  border: #white;
-	                draw "Cycle: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                draw "Weeks: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
 	                y <- y + 25#px;
 	                
 	                draw "Treatment: " + treatments[cycle_count] at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
