@@ -173,10 +173,13 @@ global {
 			int treatment <- treatments[i];
 			float maxDynamicYield <- max_dynamic_yields[i] with_precision 7;
 			
+			// test
+			float stickyToRemove <- remove_sticky_notes[i] with_precision 2;
+			
 			save [cycles, pest_total, pestResistant, pestNonResistant, potentialParasitoid, 
 				parasitoid, potentialPestEatenByParasitoid, potentialPredator, predator, potentialPestEatenByPredator,
 				totalPotentialPestEaten, totalPestEaten, predationRate, fieldCase, dynamicYield, potentialYield,
-				realYield, treatment, maxDynamicYield
+				realYield, treatment, maxDynamicYield, stickyToRemove
 			] to: "../results/calc.csv" format:"csv" rewrite: false;
 		}
 		
@@ -291,7 +294,7 @@ global {
 		//addpredation_rates
 	}
 	
-	action update_pest_non_resistant_and_relevant_fields {
+	action update_pest_non_resistant {
 		/**
 		 * This function uses to update each cycle_count (7 days or a week)
 		 */
@@ -359,14 +362,6 @@ global {
 			}
 		}
 	}
-	
-//	action update_pests_were_eaten_by {
-//		// update pest was eaten by to list
-//		add num_pest_eaten_by_parasitoid to: potential_pests_eaten_by_parasitoids;
-//		add num_pest_eaten_by_predator to: potential_pests_eaten_by_predators;
-////		write("pests_eaten_by_parasitoids: " + potential_pests_eaten_by_parasitoids);
-////		write("pests_eaten_by_predators: " + potential_pests_eaten_by_predators);
-//	}
 	
 	action renew_variable_each_cycle_count {
 		// this function use for renewing variable to zero every each cycle_count count
@@ -445,7 +440,10 @@ global {
 	}
 	
 	action calc_sticky_notes_need_to_remove {
-		if (cycle_count < 1) {return;}
+		if (cycle_count < 1) {
+			add 300 to: remove_sticky_notes;
+			return;
+		}
 		float tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
 		add tmp_remove_rice_yield to: remove_sticky_notes;
 		list<rice_grid> rice_pest <-  abs(round(tmp_remove_rice_yield)) among shuffle(rice_grid) where(each.cell_value > 0); //length(Pest) > 0 and 
@@ -494,13 +492,13 @@ global {
 		do calc_potential_parasitoid;
 		
 		// pest
-		do update_pest_non_resistant_and_relevant_fields;
+		do update_pest_non_resistant;
 		do update_pest_resistant;
 		do update_pest_total;
 		do update_total_pest_eaten;
+		
 		//
 		do update_predation_rate;
-		// resistant
 		
 		// result calculation
 		do calc_field_case;
@@ -512,41 +510,22 @@ global {
 	
 	reflex farmer_decision_to_treatment when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
 		//write("cycle_count: " + cycle_count);
-		if (cycle_count = 0) {
+		/*if (cycle_count = 0 or cycle_count = 12) {
 			add 0 to: treatments;
 		} else {
 			add 1 to: treatments;
-		}
+		}*/
 		
-		// dynamic code
-		/*if (cycle_count = 12) {
-			// Harvest
+		
+		if (cycle_count = 0 or cycle_count = 12) {
 			add 0 to: treatments;
 		} else {
-			bool confirm <- user_confirm("Confirm","Please confirm, Would you spray or not?");
+			bool confirm <- user_confirm("Spray","Please confirm, Would you spray or not?");
 			write("user confirm: " + confirm);
 			add confirm ? 1 : 0 to: treatments;
-		}*/
-		/*
-		// independant var
-		do calc_dynamic_yield;
-		// structure or dependent variables
-		do update_predators;
-		do update_potential_pests_eaten_by_predators;
-		do update_potential_pests_eaten_by_parasitoids;
-		do update_total_potential_pest_eaten;
-		do update_total_pest_eaten;
-		do update_parasitoids;
-		do update_pest_non_resistant_and_relevant_fields;
-		do update_pest_resistant;
-		do update_pest_total;
-		do update_predation_rate;
-		do calc_field_case;
-		do calc_potential_yield;
-		do calc_real_yield_in_tons;
-		do calc_max_dynamic_yield;
-		do calc_sticky_notes_need_to_remove;
-		* */
+		}
+		
+		
 		do sequential_var_calc;
 		is_farmer_decided <- true;
 		//write("treatment list: " + treatments);
@@ -588,6 +567,14 @@ global {
 		
 		float finalYield <- 5 * stickyRemain / 300;
 		write("Final yeild (t/ha): " + finalYield);
+		
+		// check ui sticky note or grid
+		list<rice_grid> rice_cell <-  rice_grid where(each.cell_value > 0);
+		float remainingCell <- 0.0;
+		loop rc over: rice_cell {
+			remainingCell <- remainingCell + rc.cell_value;
+		}
+		write("remaining cell value: " + remainingCell);
 	}
 	
 }
@@ -602,8 +589,7 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8  {
 	bool is_free <- true;
 	
 	init {
-//		carrying_capacity <- max_carrying_capacity;
-//		biomass <- rnd(0, carrying_capacity);
+
 	}
 	
 	action change_color {
@@ -831,22 +817,26 @@ experiment Experiment type: gui{
 		
 		// every 28 cycles equal to one cycle count ( a week)
 		display plots type: 2d refresh:every(per_cycle_count#cycles){
-				chart "Population Dynamics" type: series {
+				chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
 				    data "Pest" value: length(Pest) color: PEST_COLOR;
 				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
 				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
 				    data "Treatment" value: treatments[cycle_count] * 50 color: #blue style: dot; // display dot as a treatment in value 50
 				}
+				
+				chart "Crop Yield" size: {1,0.5} position: {0,0.5} type: series {
+				    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+				}
 		}
 		
 		// change this to on init cause it needs to start the programme
-		display plot_crop_yield_each_cycle type: 2d refresh:every(per_cycle_count#cycles){ // skip(1#cycles)
+		/*display plot_crop_yield_each_cycle type: 2d refresh:every(per_cycle_count#cycles){ // skip(1#cycles)
 				chart "Crop Yield" type: series {
 				    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
-				    //data "Predator" value: length(Predator) color: PREDATOR_COLOR;//[cycle_count, length(Predator)] color: #yellow;
 				}
-		}
+		}*/
 		
 		
 	}
