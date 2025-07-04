@@ -151,10 +151,9 @@ global {
 			bool delete_file_ok <- delete_file(calc_file);
             write "Deleted file: " + delete_file_ok;
 		}
-		string data_string <- ""; 
 
 		// stick to the excel
-		/*loop i from: 0 to: 12 {
+		loop i from: 0 to: 12 {
 			int cycles <- i;
 			int pest_total <- round(pests_total[i]);
 			float pestResistant <- pest_resistants[i] with_precision 1;
@@ -183,11 +182,11 @@ global {
 				totalPotentialPestEaten, totalPestEaten, predationRate, fieldCase, dynamicYield, potentialYield,
 				realYield, treatment, maxDynamicYield, stickyToRemove
 			] to: "../results/calc.csv" format:"csv" rewrite: false;
-		}*/
+		}
 		
 		// use all to float
 		// change all to float
-		loop i from: 0 to: 12 {
+		/*loop i from: 0 to: 12 {
 			int cycles <- i;
 			float pest_total <- pests_total[i] with_precision 2;
 			float pestResistant <- pest_resistants[i] with_precision 1;
@@ -216,8 +215,23 @@ global {
 				totalPotentialPestEaten, totalPestEaten, predationRate, fieldCase, dynamicYield, potentialYield,
 				realYield, treatment, maxDynamicYield, stickyToRemove
 			] to: "../results/calc.csv" format:"csv" rewrite: false;
-		}
+		}*/
 
+	}
+	
+	action storeBPH {
+		string BPH_path <-"../results/BPH.csv"; 
+		if file_exists(BPH_path){ 
+			write "File exists in the computer";
+			bool delete_file_ok <- delete_file(BPH_path);
+            write "Deleted file: " + delete_file_ok;
+		}
+		
+		loop i from: 0 to: 12 {
+			int week <- i;
+			float stickyNoteNeedToRemove <- remove_sticky_notes[i] with_precision 2;
+			save [week, stickyNoteNeedToRemove] to: BPH_path format: "csv" rewrite: false;
+		}
 	}
 	
 	action calc_potential_parasitoid {
@@ -310,7 +324,7 @@ global {
 //			add predation_rate to: predation_rates;
 		}
 		else if (cycle_count > 2) {
-			write("\npest non__resist in week: " + cycle_count);
+			//write("\npest non__resist in week: " + cycle_count);
 			float prev_predation_rate <- predation_rates[length(predation_rates) - 1]; // it will calc after this
 			//write("prev predation_rate: " + prev_predation_rate + " length: " + length(predation_rates));
 			//write("predation_rates: " + predation_rates);
@@ -448,33 +462,41 @@ global {
 			add 300 to: remove_sticky_notes;
 			return;
 		}
+
 		float tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
 		add tmp_remove_rice_yield to: remove_sticky_notes;
-		list<rice_grid> rice_pest <-  abs(round(tmp_remove_rice_yield)) among shuffle(rice_grid) where(each.cell_value > 0); //length(Pest) > 0 and 
-		//write("length of rice grid: " + length(rice_pest));
-		//write("tmp remove sticky note: " + tmp_remove_rice_yield);
-		//write("rice pest: " + rice_pest);
+		list<rice_grid> rice_pest <- shuffle(rice_grid) where(each.cell_value > 0); // abs(round(tmp_remove_rice_yield)) among 
+		write("tmp remove sticky note: " + abs(round(tmp_remove_rice_yield)));
+		write("rice pest: " + length(rice_pest));
+		// TODO: check week 5 which is wrong of removing sticky note
 		if (abs(round(tmp_remove_rice_yield)) != 0) {
 			if (length(rice_pest) > 0) {
-				float tmp_remove <- float(abs(round(tmp_remove_rice_yield)));
+				int tmp_remove <- abs(round(tmp_remove_rice_yield));
+				write("Start remove grid layer");
+				int removedSticky <- 0;
 				loop rp over: rice_pest {
-					if (tmp_remove = 0.0) {break;}
-					float cellValue <- rp.cell_value;
+					if (tmp_remove = 0) {break;}
+					int cellValue <- int(rp.cell_value);
 					tmp_remove <- tmp_remove - cellValue;
 					
 					if (tmp_remove < 0) {
+						// testing var
+						removedSticky <- removedSticky + (-tmp_remove);
 						ask rp {
-							cell_value <- abs(tmp_remove);
+							cell_value <- float(abs(tmp_remove));
 							do change_color;
 						}
-						tmp_remove <- 0.0;
+						tmp_remove <- 0;
 					} else {
+						// testing var
+						removedSticky <- removedSticky + cellValue;
 						ask rp {
 							cell_value <- 0.0;
 							do change_color;
 						}
 					}
 				}
+				write("remove sticky: " + removedSticky);
 			}
 		}
 	}
@@ -513,30 +535,29 @@ global {
 	}
 	
 	reflex farmer_decision_to_treatment when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
-		if (cycle_count = 0 or cycle_count = 12) {
+		write("\nWeeks: " + cycle_count);
+		/*if (cycle_count = 0 or cycle_count = 12) {
 			add 0 to: treatments;
 		} else {
 			add 0 to: treatments;
-		}
+		}*/
 		
-		/*if (cycle_count = 0 or cycle_count = 12) {
+		if (cycle_count = 0 or cycle_count = 12) {
 			add 0 to: treatments;
 		} else {
 			bool confirm <- user_confirm("Spray","Please confirm, Would you spray or not?");
 			write("user confirm: " + confirm);
 			add confirm ? 1 : 0 to: treatments;
-		}*/
-		
+		}
 		
 		do sequential_var_calc;
-		is_farmer_decided <- true;
 		//write("treatment list: " + treatments);
-		write("\nWeeks: " + cycle_count);
 		do check;	
+		is_farmer_decided <- true;
 	}
 	
 	action check {
-		write("treatments: " + treatments);
+		/*write("treatments: " + treatments);
 		// predator
 		write("predator each cycle_count: " + predators);
 		write("potential predator: " + potential_predators);
@@ -558,29 +579,46 @@ global {
 		write("potential yield: " + potential_yields);
 		write("real yield in tons: " + real_yield_in_tons);
 		write("max dynamic_yield: " + max_dynamic_yields);
+		*/
 	}
 	
 	reflex stop_experiment when: cycle_count = 12 { 
 		write("Rice harvested, stop experiment.");
 		do store_data_to_csv;
-		do calc_end_result;
+		do storeBPH;
+		do calc_end_result_and_store;
    		do pause;
 	}
 	
-	action calc_end_result {
-		float stickyRemain <- sum(remove_sticky_notes);
-		write("sticky note remaining: " + round(stickyRemain));
+	action calc_end_result_and_store {
+		float stickyNoteRemaining <- sum(remove_sticky_notes);
+		write("sticky note remaining: " + round(stickyNoteRemaining));
 		
-		float finalYield <- 5 * stickyRemain / 300;
+		float finalYield <- 5 * stickyNoteRemaining / 300;
 		write("Final yeild (t/ha): " + finalYield);
 		
 		// check ui sticky note or grid
 		list<rice_grid> rice_cell <-  rice_grid where(each.cell_value > 0);
-		float remainingCell <- 0.0;
+		float cellRemaining <- 0.0;
 		loop rc over: rice_cell {
-			remainingCell <- remainingCell + rc.cell_value;
+			cellRemaining <- cellRemaining + rc.cell_value;
 		}
-		write("remaining cell value: " + remainingCell);
+		write("remaining cell value: " + cellRemaining);
+		
+		string crop_yeild_path <- "../results/crop_yield.csv"; 
+		if file_exists(crop_yeild_path){ 
+			write "File exists in the computer";
+			bool delete_file_ok <- delete_file(crop_yeild_path);
+            write "Deleted file: " + delete_file_ok;
+		}
+		
+		save [stickyNoteRemaining, cellRemaining, finalYield] to: crop_yeild_path format: "csv" rewrite: false;
+		
+//		loop i from: 0 to: 12 {
+//			int week <- i;
+//			float stickyNoteNeedToRemove <- remove_sticky_notes[i] with_precision 2;
+//			save [week, stickyNoteNeedToRemove] to: "../results/BPH.csv" format: "csv" rewrite: false;
+//		}
 	}
 	
 }
@@ -793,7 +831,7 @@ experiment Experiment type: gui{
 			species Predator;
 			//species Farmer;
 			
-				overlay position: { 5, 5 } size: { 180 #px, 160 #px } background: # black transparency: 0.5 border: #black rounded: true
+				overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
 	            {
 	            	//for each possible type, we draw a square with the corresponding color and we write the name of the type
 	                float y <- 30#px;
@@ -814,8 +852,9 @@ experiment Experiment type: gui{
 	                draw "Weeks: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
 	                y <- y + 25#px;
 	                
-	                draw "Treatment: " + treatments[cycle_count] at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
-	                y <- y + 25#px;
+	                // current decision still make decision
+	                //draw "Treatment: " + (treatments[cycle_count] = 1 ? "Yes" : "No")  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                //y <- y + 25#px;
 				
 			}
 		
