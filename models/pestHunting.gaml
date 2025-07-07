@@ -466,9 +466,9 @@ global {
 		float tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
 		add tmp_remove_rice_yield to: remove_sticky_notes;
 		list<rice_grid> rice_pest <- shuffle(rice_grid) where(each.cell_value > 0); // abs(round(tmp_remove_rice_yield)) among 
-		write("tmp remove sticky note: " + abs(round(tmp_remove_rice_yield)));
+		write("num remove sticky note: " + abs(round(tmp_remove_rice_yield)));
 		write("rice pest: " + length(rice_pest));
-		// TODO: check week 5 which is wrong of removing sticky note
+		// TODO: wrong with all calculation
 		if (abs(round(tmp_remove_rice_yield)) != 0) {
 			if (length(rice_pest) > 0) {
 				int tmp_remove <- abs(round(tmp_remove_rice_yield));
@@ -478,10 +478,12 @@ global {
 					if (tmp_remove = 0) {break;}
 					int cellValue <- int(rp.cell_value);
 					tmp_remove <- tmp_remove - cellValue;
-					
+					write("remaining tmp remove: " + tmp_remove);
 					if (tmp_remove < 0) {
 						// testing var
-						removedSticky <- removedSticky + (-tmp_remove);
+						removedSticky <- removedSticky + (cellValue + tmp_remove);
+						write("less than zero: " + tmp_remove);
+						write("cellvalue - tmp_remove: " + (cellValue + tmp_remove));
 						ask rp {
 							cell_value <- float(abs(tmp_remove));
 							do change_color;
@@ -489,14 +491,15 @@ global {
 						tmp_remove <- 0;
 					} else {
 						// testing var
-						removedSticky <- removedSticky + cellValue;
+						 removedSticky <- removedSticky + cellValue;
+						 write("amount to remove: " + cellValue);
 						ask rp {
 							cell_value <- 0.0;
 							do change_color;
 						}
 					}
 				}
-				write("remove sticky: " + removedSticky);
+				write("removed sticky: " + removedSticky);
 			}
 		}
 	}
@@ -597,6 +600,9 @@ global {
 		float finalYield <- 5 * stickyNoteRemaining / 300;
 		write("Final yeild (t/ha): " + finalYield);
 		
+		// verify sticky note remove for ui only
+		do check_last_sticky_note;
+		
 		// check ui sticky note or grid
 		list<rice_grid> rice_cell <-  rice_grid where(each.cell_value > 0);
 		float cellRemaining <- 0.0;
@@ -613,12 +619,32 @@ global {
 		}
 		
 		save [stickyNoteRemaining, cellRemaining, finalYield] to: crop_yeild_path format: "csv" rewrite: false;
+	}
+	
+	action check_last_sticky_note {
+		float sticky_with_precision <- 0.0;
+		int sticky_note_round <- 0;
+		loop sticky over: remove_sticky_notes {
+			sticky_with_precision <- sticky_with_precision + sticky;
+			sticky_note_round <- sticky_note_round + round(sticky);
+			//write("sticky: " + sticky);
+		}
+		//write("sticky with precison and round: " + round(sticky_with_precision));
+		//write("sticky note round: " + sticky_note_round);
 		
-//		loop i from: 0 to: 12 {
-//			int week <- i;
-//			float stickyNoteNeedToRemove <- remove_sticky_notes[i] with_precision 2;
-//			save [week, stickyNoteNeedToRemove] to: "../results/BPH.csv" format: "csv" rewrite: false;
-//		}
+		if (sticky_note_round < round(sticky_with_precision)) {
+			// we remove over 1 amount which should added one
+			int add_amount <- round(sticky_with_precision) - sticky_note_round;
+			write("amount need to add: " + add_amount);
+			if (add_amount <= 3) {
+				list<rice_grid> rice_cell <- rice_grid where(each.cell_value < 3);
+				// amount has only 1 in this case
+				ask rice_cell[0] {
+					cell_value <- float(rice_cell[0].cell_value + add_amount);
+					do change_color;
+				}
+			}
+		}
 	}
 	
 }
@@ -866,7 +892,7 @@ experiment Experiment type: gui{
 				    data "Pest" value: length(Pest) color: PEST_COLOR;
 				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
 				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
-				    data "Treatment" value: treatments[cycle_count] * 50 color: #blue style: dot; // display dot as a treatment in value 50
+				    data "Treatment" value: (treatments[cycle_count] = 1 ? treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
 				}
 				
 				chart "Crop Yield" size: {1,0.5} position: {0,0.5} type: series {
