@@ -1,10 +1,11 @@
 /**
 * Name: pestHunting
-* Base on research and game formula on the excel file
-* Using grid and movement on grid
 * First Toy Model
 * Author: Rattanak
 * Tags: farmer
+* Base on research and game formula on the excel file
+* Using grid represent as a rice fields
+* Spray will be for a whole rice fields
 */
 
 
