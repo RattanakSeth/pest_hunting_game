@@ -714,7 +714,7 @@ species Insect {
 	//rice_grid target_cell;
 	//List of the cells already passed by the agents and memorised
 	//list<rice_grid> memory;
-	float speed <- 20 #km/#h;
+	//float speed <- 20 #km/#h;
 	
 	init {
 		// move to one of a grid location

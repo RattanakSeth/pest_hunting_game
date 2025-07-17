@@ -395,11 +395,6 @@ global {
 	}
 	
 	action renew_variable_each_cycle_count {
-		// this function use for renewing variable to zero every each cycle_count count
-//		write("num_pest_eaten_by_parasitoid: " + num_pest_eaten_by_parasitoid);
-//		write("max : " + potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1]);
-//		write("num_pest_eaten_by_predator: " + num_pest_eaten_by_predator);
-//		write("max: " + potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1]);
 		num_pest_eaten_by_parasitoid <- 0;
 		num_pest_eaten_by_predator <- 0;
 	}
@@ -558,12 +553,20 @@ global {
 		} else {
 			add 1 to: treatments;
 			// select cell
-			/*list<rice_grid> rice_cell <- one_of(rice_grid).neighbors;		
+			list<rice_grid> rice_cell <- one_of(rice_grid).neighbors;		
 			loop rc over: rice_cell {
-				write("rc: " + rc.location);
-				
 				do create_treatment_area(rc.location);
-			}*/
+				write("rc: " + rc.location);
+				ask rc {
+					put 1 in: self.treatments at: cycle_count;
+					//write("self treatment: " + self.treatments);
+					list<Insect> insect_on_grid <- agents_inside(self);//Pest at self;//agents_overlapping(self);
+//					loop obj over: insect_on_grid {
+//						write("select object:" + obj);
+//					}
+					write("insect on grid: " + insect_on_grid);
+				}
+			}
 			
 		}
 		
@@ -673,6 +676,7 @@ global {
 	
 	geometry select_shape(point l) {
 		write(l);
+		// TODO: edit this as a dynamic grid
 		return rectangle({l.x - 5, l.y - 5}, {l.x + 5, l.y + 5});
 		//return l;
 	}
@@ -718,38 +722,15 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8 { 
 	rgb color <- #green;
 	float cell_value min: 0.0 max: 3.0 <- 3.0;
 	bool is_free <- true;
+	list<int> treatments <- [0,0,0,0,0,0,0,0,0,0,0,0,0];
 	
 	
 	init {
 	//write "my column index is:" + grid_x;
+		//write("treatment: " + length(self.treatments));
 	}
 	
 	action change_color {
-		// color-term: color-term.com
-		/*
-		if (cell_value = 3) {
-			// Dark Green Background
-			color <- rgb(0, 112, 48);
-		} else if (cell_value = 2) {
-			// Light Blue Background
-			color <- rgb(221, 235, 247);
-		} else if (cell_value <= 1.1 and cell_value <= 2.9) {
-			// Medium Blue Background
-			color <- rgb(189, 215, 238);
-		} else if (cell_value < 1) {
-			// Gray Background
-			color <- rgb(217, 217, 217);
-		} else if (cell_value <= 0.1 and cell_value <= 1.9) {
-			// Light Magenta Background
-			color <- rgb(242, 220, 219);
-		} else if (cell_value > 2.1) {
-			// Light Green Background
-			color <- rgb(198, 239, 206);
-		} else if (cell_value = 1) {
-			// Pink Background
-			color <- rgb(255, 199, 206);
-		}
-		*/
 		if (cell_value = 3.0) {
 			// Dark Green Background
 			color <- rgb(0, 112, 48);
