@@ -118,6 +118,11 @@ global {
 //				do draw_red_line;
 //			}
 //		}
+
+//		loop rice_c over: rice_grid {
+//			write("insect inside: " + rice_c.get_insects_inside());
+//			//write("rice cell test: " + ((Parasitoid + Predator + Pest) inside rice_c));
+//		}
 	}
 	
 	action initialise_variable {
@@ -552,21 +557,40 @@ global {
 			add 0 to: treatments;
 		} else {
 			add 1 to: treatments;
+//			int choose_one_x <- rnd(9);
+//			int choose_one_y <- rnd(9);
+			list<point> rnd_grids <- get_treatment_field();
+			write("random cell: " + length(rnd_grids));
+			loop i from: 0 to: length(rnd_grids) -1 {
+				write("random grid: " + rnd_grids[i]);
+//				write("cell point: " + rnd_grids);
+				rice_grid rg <- rice_grid grid_at rnd_grids[i];
+				do create_treatment_area(rg.location);
+				list<Insect> insect_on_grid <- rg.get_insects_inside();
+				write("insect inside grid: " + insect_on_grid);
+				// TODO: remove treatment area take only insect
+			}
+			//write("random variable: " + rnd_cell.grid_x + " " + rnd_cell.grid_y);
+			//do create_treatment_area(rnd_cell.location);
 			// select cell
-			list<rice_grid> rice_cell <- one_of(rice_grid).neighbors;		
+			/*list<rice_grid> rice_cell <- one_of(rice_grid).neighbors;	
+			write("rice cell: " + rice_cell);
 			loop rc over: rice_cell {
-				do create_treatment_area(rc.location);
-				write("rc: " + rc.location);
+//				
+//				write("rc: " + rc.location);
+				list insect_on_grid <- rc.get_insects_inside();//(Parasitoid + Predator + Pest) inside rc;
+				write("insect on grid: " + insect_on_grid);
 				ask rc {
 					put 1 in: self.treatments at: cycle_count;
 					//write("self treatment: " + self.treatments);
-					list<Insect> insect_on_grid <- agents_inside(self);//Pest at self;//agents_overlapping(self);
+					//list insect_on_grid <- (Parasitoid + Predator + Pest) inside rc;//rc.get_insects_inside();//Insect inside (self);////agents_inside(self);//Pest at self;//agents_overlapping(self);
 //					loop obj over: insect_on_grid {
 //						write("select object:" + obj);
 //					}
-					write("insect on grid: " + insect_on_grid);
+					//write("insect on grid: " + insect_on_grid);
 				}
-			}
+				do create_treatment_area(rc.location);
+			}*/
 			
 		}
 		
@@ -578,10 +602,34 @@ global {
 			add confirm ? 1 : 0 to: treatments;
 		}*/
 		
-		do sequential_var_calc;
+		//do sequential_var_calc;
 		//write("treatment list: " + treatments);
-		do check;	
+		do check;
 		is_farmer_decided <- true;
+	}
+	
+	list<point> get_treatment_field {
+		list<point> rnd_grids <- [];
+		rice_grid rnd_cell <- one_of(rice_grid);
+		add {rnd_cell.grid_x, rnd_cell.grid_y} to: rnd_grids;
+		write("random x: " + rnd_cell.grid_x);
+		int next_cell <- 8;
+		int start <- 0;
+		int start_x <- rnd_cell.grid_x;
+		int start_y <- rnd_cell.grid_y;
+		loop i from: 0 to: next_cell {
+			start_x <- start_x + 1;
+			if (start_x > 9) {
+				start_x <- 0;
+				start_y <- start_y + 1;
+				if (start_y > 9) {
+					start_y <- 0;
+				}
+			}
+			add {start_x, start_y} to: rnd_grids;
+		}
+		
+		return rnd_grids;
 	}
 	
 	action check {
@@ -692,15 +740,7 @@ global {
 			color <-  #transparent;//tet_colors[i];
 			
 			location <- l;//{15,10};
-//			center_rotate<-{15,10};
-//			if i < 2 {
-//				location <- {15,10};
-//				center_rotate<-{15,10};
-//			}
-//			else {
-//				location <- {15.5,10.5};
-//				center_rotate <- {15.5, 10.5};
-//			}
+
 			shape <- world.select_shape(location);
 			
 			//frequency <- world.freq(level);
@@ -723,11 +763,19 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8 { 
 	float cell_value min: 0.0 max: 3.0 <- 3.0;
 	bool is_free <- true;
 	list<int> treatments <- [0,0,0,0,0,0,0,0,0,0,0,0,0];
+	//list<Insect> insects_inside <- (Predator + Pest + Predator) inside(self);
 	
 	
 	init {
 	//write "my column index is:" + grid_x;
 		//write("treatment: " + length(self.treatments));
+		
+		//write("insect inside: " + insects_inside);
+	}
+	
+	list get_insects_inside {
+		return agents_inside(self);//(Predator + Pest + Predator) inside self;
+		//return (Predator + Pest + Predator) inside(self);
 	}
 	
 	action change_color {
@@ -779,10 +827,10 @@ species Insect {
 		current_cell.is_free <- false;
 	}
 	
-	reflex move {
+	/*reflex move {
 		current_cell <- one_of(current_cell.neighbors);
 		location <- current_cell.location;
-	}
+	}*/
 	
 	aspect default {
 		draw circle(1) color: #red;
@@ -805,7 +853,7 @@ species Pest parent:Insect {
 species Parasitoid parent: Insect {
 	int pest_eaten <- 0;
 	
-	reflex move {
+	/*reflex move {
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
 		list pest_on_grid <- agents_overlapping(current_cell); //current_cell overlap Pest;
 		if (length(pest_on_grid) = 1) {
@@ -825,7 +873,7 @@ species Parasitoid parent: Insect {
 			location <- current_cell.location;
 			current_cell.is_free <- false;
 		}
-	}
+	}*/
 	
 	/*reflex eat when: num_pest_eaten_by_parasitoid < potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
@@ -851,7 +899,7 @@ species Parasitoid parent: Insect {
 species Predator parent: Insect {
 	int pest_eaten <- 0;
 
-	reflex move {
+	/*reflex move {
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
 		//write("current cell: ", tmp_cell);
 		if (tmp_cell != nil) {
@@ -864,7 +912,7 @@ species Predator parent: Insect {
 			current_cell <- one_of(current_cell.neighbors);
 			location <- current_cell.location;
 		}
-	}
+	}*/
 	
 	/*reflex eat when: num_pest_eaten_by_predator < potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
