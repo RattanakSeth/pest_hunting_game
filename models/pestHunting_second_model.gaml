@@ -83,6 +83,9 @@ global {
 	int rice_field_width <- 10;
 	int rice_field_height <- 10;
 	
+	// In between treatment store
+	list treatment_areas <- [];
+	
 	// UI Initialise
 //	geometry shape <- rectangle(20,30);
 	init {
@@ -104,6 +107,8 @@ global {
 //			location <- current_cell.location;
 //			current_cell.is_free <- false;
 		}
+		
+		create Farmer;
 		
 		// initial variable
 		do initialise_variable;
@@ -136,6 +141,8 @@ global {
 		do define_field_case;
 		do sequential_var_calc;
 		do check;
+		// no treatment
+		add [] to: treatment_areas;
 	}
 	
 	reflex check_date_time {
@@ -424,9 +431,6 @@ global {
 	}
 	
 	action update_parasitoids {
-		// first init or cycle_count zero will be 25
-		// we treated or sprayed
-		//write("cycle " + cycle_count + "not return");
 		if (cycle_count = 0) {
 			add 25 to: parasitoids;
 		} else {
@@ -550,87 +554,6 @@ global {
 		do calc_sticky_notes_need_to_remove;
 	}
 	
-	reflex farmer_decision_to_treatment when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
-		write("\nWeeks: " + cycle_count);
-		// apply treatment in between
-		if (cycle_count = 0 or cycle_count = 12) {
-			add 0 to: treatments;
-		} else {
-			add 1 to: treatments;
-//			int choose_one_x <- rnd(9);
-//			int choose_one_y <- rnd(9);
-			list<point> rnd_grids <- get_treatment_field();
-			write("random cell: " + length(rnd_grids));
-			loop i from: 0 to: length(rnd_grids) -1 {
-				write("random grid: " + rnd_grids[i]);
-//				write("cell point: " + rnd_grids);
-				rice_grid rg <- rice_grid grid_at rnd_grids[i];
-				do create_treatment_area(rg.location);
-				list<Insect> insect_on_grid <- rg.get_insects_inside();
-				write("insect inside grid: " + insect_on_grid);
-				// TODO: remove treatment area take only insect
-			}
-			//write("random variable: " + rnd_cell.grid_x + " " + rnd_cell.grid_y);
-			//do create_treatment_area(rnd_cell.location);
-			// select cell
-			/*list<rice_grid> rice_cell <- one_of(rice_grid).neighbors;	
-			write("rice cell: " + rice_cell);
-			loop rc over: rice_cell {
-//				
-//				write("rc: " + rc.location);
-				list insect_on_grid <- rc.get_insects_inside();//(Parasitoid + Predator + Pest) inside rc;
-				write("insect on grid: " + insect_on_grid);
-				ask rc {
-					put 1 in: self.treatments at: cycle_count;
-					//write("self treatment: " + self.treatments);
-					//list insect_on_grid <- (Parasitoid + Predator + Pest) inside rc;//rc.get_insects_inside();//Insect inside (self);////agents_inside(self);//Pest at self;//agents_overlapping(self);
-//					loop obj over: insect_on_grid {
-//						write("select object:" + obj);
-//					}
-					//write("insect on grid: " + insect_on_grid);
-				}
-				do create_treatment_area(rc.location);
-			}*/
-			
-		}
-		
-		/*if (cycle_count = 0 or cycle_count = 12) {
-			add 0 to: treatments;
-		} else {
-			bool confirm <- user_confirm("Spray","Please confirm, Would you spray or not?");
-			write("user confirm: " + confirm);
-			add confirm ? 1 : 0 to: treatments;
-		}*/
-		
-		//do sequential_var_calc;
-		//write("treatment list: " + treatments);
-		do check;
-		is_farmer_decided <- true;
-	}
-	
-	list<point> get_treatment_field {
-		list<point> rnd_grids <- [];
-		rice_grid rnd_cell <- one_of(rice_grid);
-		add {rnd_cell.grid_x, rnd_cell.grid_y} to: rnd_grids;
-		write("random x: " + rnd_cell.grid_x);
-		int next_cell <- 8;
-		int start <- 0;
-		int start_x <- rnd_cell.grid_x;
-		int start_y <- rnd_cell.grid_y;
-		loop i from: 0 to: next_cell {
-			start_x <- start_x + 1;
-			if (start_x > 9) {
-				start_x <- 0;
-				start_y <- start_y + 1;
-				if (start_y > 9) {
-					start_y <- 0;
-				}
-			}
-			add {start_x, start_y} to: rnd_grids;
-		}
-		
-		return rnd_grids;
-	}
 	
 	action check {
 		/*write("treatments: " + treatments);
@@ -656,6 +579,7 @@ global {
 		write("real yield in tons: " + real_yield_in_tons);
 		write("max dynamic_yield: " + max_dynamic_yields);
 		*/
+		write("test");
 	}
 	
 	reflex stop_experiment when: cycle_count = 12 { 
@@ -720,36 +644,11 @@ global {
 		}
 	}
 	
-	// ui action
-	
 	geometry select_shape(point l) {
 		write(l);
 		// TODO: edit this as a dynamic grid
 		return rectangle({l.x - 5, l.y - 5}, {l.x + 5, l.y + 5});
 		//return l;
-	}
-	
-	action create_treatment_area(point l){
-//		int j <- rnd(6);
-//		stats[next_te] <- stats[next_te] + 1;
-		create treatment_area {
-//			i <- next_te;
-//			i <- 1;
-			
-			
-			color <-  #transparent;//tet_colors[i];
-			
-			location <- l;//{15,10};
-
-			shape <- world.select_shape(location);
-			
-			//frequency <- world.freq(level);
-			is_active <- true;
-//			ask tetrimino - self {
-//				do die;
-//			}
-		}
-		//next_te <- j;
 	}
 	
 }
@@ -794,14 +693,6 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8 { 
 		}
 	}
 	
-//	action draw_red_line {
-//		color <- #yellow;
-////		draw border: true color: #red width: 1 size: 1;
-////		draw circle(10) color: #blue;
-//		draw line([{20, 20}, {40, 40}]) color: #black begin_arrow:5; 
-//		draw line([{10, 10},{20, 50}, {40, 70}]) color: #green end_arrow: 2 begin_arrow: 2; 
-//		draw square(10) at: {80,20} color: #purple begin_arrow: 2; 
-//	}
 }
 
 species Insect {
@@ -853,7 +744,8 @@ species Pest parent:Insect {
 species Parasitoid parent: Insect {
 	int pest_eaten <- 0;
 	
-	/*reflex move {
+	reflex move {
+		write("Parasitoid moving: ");
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
 		list pest_on_grid <- agents_overlapping(current_cell); //current_cell overlap Pest;
 		if (length(pest_on_grid) = 1) {
@@ -873,7 +765,7 @@ species Parasitoid parent: Insect {
 			location <- current_cell.location;
 			current_cell.is_free <- false;
 		}
-	}*/
+	}
 	
 	/*reflex eat when: num_pest_eaten_by_parasitoid < potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
@@ -899,7 +791,7 @@ species Parasitoid parent: Insect {
 species Predator parent: Insect {
 	int pest_eaten <- 0;
 
-	/*reflex move {
+	reflex move {
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
 		//write("current cell: ", tmp_cell);
 		if (tmp_cell != nil) {
@@ -912,7 +804,7 @@ species Predator parent: Insect {
 			current_cell <- one_of(current_cell.neighbors);
 			location <- current_cell.location;
 		}
-	}*/
+	}
 	
 	/*reflex eat when: num_pest_eaten_by_predator < potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
@@ -934,21 +826,16 @@ species Predator parent: Insect {
 	}
 }
 
-species Farmer {
-	reflex apply_treatment_to_rice_crop {
-		write("farmer applay treatment work!");
-	}
-}
 
-species treatment_area {
+species TreatmentArea {
 	// This a shape of drawing while farmer decide to spray
 	int i;
-	int rotation;
 	bool is_active;
 	float frequency;
 	rgb color;
 	
-	point center_rotate;
+	//point center_rotate;
+	
 	
 	aspect default {
 		draw shape color:color border:#red at: location size: 5;
@@ -956,6 +843,133 @@ species treatment_area {
 		//draw shape color:color border: #red;
 	}
 	
+}
+
+species Farmer {
+
+	reflex farmer_decision when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
+			write("\nWeeks: " + cycle_count);
+			// apply treatment in between
+			if (cycle_count = 0 or cycle_count = 12) {
+				add 0 to: treatments;
+			} else {
+				add 1 to: treatments;
+				list<rice_grid> rnd_grids <- get_fields_for_treatment();
+				add rnd_grids to: treatment_areas;
+				//list<pair<string, int>> insect_list <- []; // list of insect here
+				//write("random cell: " + length(rnd_grids));
+				loop rc over: rnd_grids {
+					//write("random grid: " + rnd_grids[i]);
+					//rice_grid rg <- rice_grid grid_at rnd_grids[i];
+					do create_treatment_area(rc.location);
+					list<Insect> insect_on_grid <- rc.get_insects_inside();
+					insect_on_grid <- insect_on_grid where (each!=nil); // remove nil
+					insect_on_grid >>- 0; // remove nill from list
+					//insect_on_grid <- remove nill from: insect_on_grid;
+					write("insect inside grid: " + insect_on_grid);
+					// TODO: each grid store data and compute only treatment area
+				}
+				//write("random variable: " + rnd_cell.grid_x + " " + rnd_cell.grid_y);
+				//do create_treatment_area(rnd_cell.location);
+				// select cell
+				/*list<rice_grid> rice_cell <- one_of(rice_grid).neighbors;	
+				write("rice cell: " + rice_cell);
+				loop rc over: rice_cell {
+					list insect_on_grid <- rc.get_insects_inside();//(Parasitoid + Predator + Pest) inside rc;
+					write("insect on grid: " + insect_on_grid);
+					ask rc {
+						put 1 in: self.treatments at: cycle_count;
+						//write("self treatment: " + self.treatments);
+						//list insect_on_grid <- (Parasitoid + Predator + Pest) inside rc;//rc.get_insects_inside();//Insect inside (self);////agents_inside(self);//Pest at self;//agents_overlapping(self);
+	//					loop obj over: insect_on_grid {
+	//						write("select object:" + obj);
+	//					}
+						//write("insect on grid: " + insect_on_grid);
+					}
+					do create_treatment_area(rc.location);
+				}*/
+				
+			}
+			
+			/*if (cycle_count = 0 or cycle_count = 12) {
+				add 0 to: treatments;
+			} else {
+				bool confirm <- user_confirm("Spray","Please confirm, Would you spray or not?");
+				write("user confirm: " + confirm);
+				add confirm ? 1 : 0 to: treatments;
+			}*/
+			
+			//do action: sequential_var_calc;
+			ask world {do sequential_var_calc;}
+			//write("treatment list: " + treatments);
+			//do check();
+			ask world {do check;}
+			//ask world {do get_total_prev_treatment();}
+			is_farmer_decided <- true;
+		}
+	
+	// ui action
+	
+	
+	
+	action create_treatment_area(point l){
+//		int j <- rnd(6);
+//		stats[next_te] <- stats[next_te] + 1;
+		create TreatmentArea {
+			color <-  #transparent;//tet_colors[i];
+			location <- l;//{15,10}
+			shape <- world.select_shape(location);
+			//frequency <- world.freq(level);
+			is_active <- true;
+//			ask tetrimino - self {
+//				do die;
+//			}
+		}
+
+	}
+	
+	list<rice_grid> get_fields_for_treatment{
+		/* 
+		 * This choosing rice fields base on the behavior of the farmer 
+		 * They will have different choices
+		 * Place to spray will be chosen where the insect in stay on
+		 */
+		rice_grid rnd_one_field <- one_of(rice_grid where (!each.is_free));
+		list<rice_grid> rice_cell <- rnd_one_field.neighbors;
+		add rnd_one_field to: rice_cell;
+		rice_cell <- rice_cell sort_by each;
+		
+		write("rice cell: " + rice_cell);
+		
+		return rice_cell;
+		/* 
+		list<point> rnd_grids <- [];
+		rice_grid rnd_cell <- one_of(rice_grid);
+		add {rnd_cell.grid_x, rnd_cell.grid_y} to: rnd_grids;
+		write("random x: " + rnd_cell.grid_x);
+		int next_cell <- 8;
+		int start <- 0;
+		int start_x <- rnd_cell.grid_x;
+		int start_y <- rnd_cell.grid_y;
+		loop i from: 0 to: next_cell {
+			start_x <- start_x + 1;
+			if (start_x > 9) {
+				start_x <- 0;
+				start_y <- start_y + 1;
+				if (start_y > 9) {
+					start_y <- 0;
+				}
+			}
+			add {start_x, start_y} to: rnd_grids;
+		}
+		
+		return rnd_grids;
+		*/
+	}
+	
+	aspect default {
+		draw circle(1) color:#transparent at: {0, 0};
+	}
 }
 
 experiment Experiment type: gui{
@@ -968,8 +982,8 @@ experiment Experiment type: gui{
 			species Pest;
 			species Parasitoid;
 			species Predator;
-			//species Farmer;
-			species treatment_area;
+			species TreatmentArea;
+			species Farmer;
 			
 				overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
 	            {
