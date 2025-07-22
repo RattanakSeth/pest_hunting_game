@@ -114,20 +114,6 @@ global {
 		do initialise_variable;
 		//write("cycle: " + cycle);
 		
-		// test
-		//list<rice_grid> rice_cell <-  one_of(rice_grid).neighbors;
-//		do create_tetri;
-//		loop rc over: rice_cell {
-//			ask rc {
-//				write("draw rc: " + rc);
-//				do draw_red_line;
-//			}
-//		}
-
-//		loop rice_c over: rice_grid {
-//			write("insect inside: " + rice_c.get_insects_inside());
-//			//write("rice cell test: " + ((Parasitoid + Predator + Pest) inside rice_c));
-//		}
 	}
 	
 	action initialise_variable {
@@ -299,17 +285,22 @@ global {
 	
 	int get_total_prev_treatment {
 		int total_prev_treatment <- 0;
-		loop i from: 0 to: length(treatments) - 2 {
+		loop i from: 0 to: length(treatments) - 1 {
 			total_prev_treatment <- total_prev_treatment + treatments[i];
 		}
 			
 		return total_prev_treatment;
 	}
 	
+	int get_prev_treatment {
+		// because treatment was applied after the calculation
+		return treatments[cycle_count];
+	}
+	
 	action update_predators {
 		if (cycle_count > 0) {
 			//write("cycle: " + cycle_count + "predator: " + (treatments[length(treatments) - 2] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
-			float num_predator <- ((treatments[length(treatments) - 2] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
+			float num_predator <- ((treatments[length(treatments) - 1] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
 			add num_predator to: predators;
 			//create Predator number: number_of_predator;
 			int update_predator_amount <- round(predators[length(predators) - 1]) - round(predators[length(predators) - 2]);
@@ -354,10 +345,10 @@ global {
 			//write("prev predation_rate: " + prev_predation_rate + " length: " + length(predation_rates));
 			//write("predation_rates: " + predation_rates);
 
-			int prev_treatment <- treatments[length(treatments) - 2];
+			int prev_treatment <- treatments[length(treatments) - 1];
 			//write("prev_treatment: " + prev_treatment);
 			//write("treatments: " + treatments);
-			int sum_first_prev_treatment <- treatments[0] + treatments[length(treatments) - 2];
+			int sum_first_prev_treatment <- treatments[0] + treatments[length(treatments) - 1];
 			//write("sum_first_prev_treatment: " + sum_first_prev_treatment);
 			float prev_pest_non_resistant <- pest_non_resistants[length(pest_non_resistants) - 1];
 			//write("prev_pest_non_resistant: " + prev_pest_non_resistant);
@@ -436,7 +427,7 @@ global {
 		} else {
 			float prev_total_potential_pests_eaten <- total_potential_pests_eaten[length(total_potential_pests_eaten)-1];
 			float prev_total_pest_eaten <- total_pest_eaten[length(total_pest_eaten) - 1];
-			float tmp_parasitoid <- (treatments[length(treatments) - 2] = 1 ? normal_survival_pesticide_parasitoid : 1) * parasitoids[length(parasitoids) - 1] * ((prev_total_potential_pests_eaten = prev_total_pest_eaten) ? normal_reproduction_rate_parasitoid : (((normal_reproduction_rate_parasitoid - 1) * prev_total_pest_eaten / prev_total_potential_pests_eaten) + 1));
+			float tmp_parasitoid <- (treatments[length(treatments) - 1] = 1 ? normal_survival_pesticide_parasitoid : 1) * parasitoids[length(parasitoids) - 1] * ((prev_total_potential_pests_eaten = prev_total_pest_eaten) ? normal_reproduction_rate_parasitoid : (((normal_reproduction_rate_parasitoid - 1) * prev_total_pest_eaten / prev_total_potential_pests_eaten) + 1));
 			add tmp_parasitoid to: parasitoids;
 			int parasitoid_amount <- round(parasitoids[length(parasitoids) - 1]) - round(parasitoids[length(parasitoids) - 2]);
 			if (parasitoid_amount > 0) {
@@ -579,15 +570,6 @@ global {
 		write("real yield in tons: " + real_yield_in_tons);
 		write("max dynamic_yield: " + max_dynamic_yields);
 		*/
-		write("test");
-	}
-	
-	reflex stop_experiment when: cycle_count = 12 { 
-		write("Rice harvested, stop experiment.");
-		do store_data_to_csv;
-		do storeBPH;
-		do calc_end_result_and_store;
-   		do pause;
 	}
 	
 	action calc_end_result_and_store {
@@ -731,10 +713,10 @@ species Insect {
 species Pest parent:Insect {
 	//float reproduction_rate <- 1.33;
 
-//	reflex move {
-//		current_cell <- one_of(current_cell.neighbors);
-//		location <- current_cell.location;
-//	}
+	reflex move {
+		current_cell <- one_of(current_cell.neighbors);
+		location <- current_cell.location;
+	}
 	
 	aspect default {
 		draw square(1) color: #red;
@@ -745,11 +727,11 @@ species Parasitoid parent: Insect {
 	int pest_eaten <- 0;
 	
 	reflex move {
-		write("Parasitoid moving: ");
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
 		list pest_on_grid <- agents_overlapping(current_cell); //current_cell overlap Pest;
 		if (length(pest_on_grid) = 1) {
 			// current cell will be a previous cell
+			// in case this grid consists of only one insect then moving will be free cell
 			current_cell.is_free <- true;
 		}
 		if (tmp_cell != nil) {
@@ -849,7 +831,9 @@ species Farmer {
 
 	reflex farmer_decision when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
 			write("\nWeeks: " + cycle_count);
-			// apply treatment in between
+			// this calculation isn't related to current treatment
+			ask world {do sequential_var_calc;}
+			// apply treatment
 			if (cycle_count = 0 or cycle_count = 12) {
 				add 0 to: treatments;
 			} else {
@@ -867,27 +851,11 @@ species Farmer {
 					insect_on_grid >>- 0; // remove nill from list
 					//insect_on_grid <- remove nill from: insect_on_grid;
 					write("insect inside grid: " + insect_on_grid);
-					// TODO: each grid store data and compute only treatment area
-				}
-				//write("random variable: " + rnd_cell.grid_x + " " + rnd_cell.grid_y);
-				//do create_treatment_area(rnd_cell.location);
-				// select cell
-				/*list<rice_grid> rice_cell <- one_of(rice_grid).neighbors;	
-				write("rice cell: " + rice_cell);
-				loop rc over: rice_cell {
-					list insect_on_grid <- rc.get_insects_inside();//(Parasitoid + Predator + Pest) inside rc;
-					write("insect on grid: " + insect_on_grid);
 					ask rc {
 						put 1 in: self.treatments at: cycle_count;
-						//write("self treatment: " + self.treatments);
-						//list insect_on_grid <- (Parasitoid + Predator + Pest) inside rc;//rc.get_insects_inside();//Insect inside (self);////agents_inside(self);//Pest at self;//agents_overlapping(self);
-	//					loop obj over: insect_on_grid {
-	//						write("select object:" + obj);
-	//					}
-						//write("insect on grid: " + insect_on_grid);
 					}
-					do create_treatment_area(rc.location);
-				}*/
+					// TODO: each grid store data and compute only treatment area
+				}
 				
 			}
 			
@@ -900,7 +868,6 @@ species Farmer {
 			}*/
 			
 			//do action: sequential_var_calc;
-			ask world {do sequential_var_calc;}
 			//write("treatment list: " + treatments);
 			//do check();
 			ask world {do check;}
@@ -925,6 +892,7 @@ species Farmer {
 //				do die;
 //			}
 		}
+		
 
 	}
 	
@@ -933,13 +901,32 @@ species Farmer {
 		 * This choosing rice fields base on the behavior of the farmer 
 		 * They will have different choices
 		 * Place to spray will be chosen where the insect in stay on
+		 * 10 grids have been selected
 		 */
+		int target_grid <- 10;
 		rice_grid rnd_one_field <- one_of(rice_grid where (!each.is_free));
 		list<rice_grid> rice_cell <- rnd_one_field.neighbors;
 		add rnd_one_field to: rice_cell;
-		rice_cell <- rice_cell sort_by each;
+		//rice_cell <- rice_cell sort_by each;
 		
-		write("rice cell: " + rice_cell);
+		write("rice cell: " + length(rice_cell));
+		int remainingCell <- target_grid - length(rice_cell);
+		if (remainingCell != 0) {
+			// need to select more
+			loop while: (length(rice_cell) < target_grid) {
+				write("loop take other grid");
+				list<rice_grid> neighbor_of_neighbor <- one_of(rnd_one_field.neighbors).neighbors;
+				rice_cell <- rice_cell union neighbor_of_neighbor;
+				if (length(rice_cell) > 10) {
+					//write("limit cell");
+					rice_cell <- (rice_cell sort_by each);
+					rice_cell <- rice_cell[0::10];
+					write("rice cell size: " + length(rice_cell));
+//					rice_cell <- rice_cell sublist 0 number: 10;
+				}
+			}
+			write("rice cell: " + rice_cell);
+		}
 		
 		return rice_cell;
 		/* 
@@ -965,6 +952,17 @@ species Farmer {
 		
 		return rnd_grids;
 		*/
+	}
+	
+	reflex stop_experiment when: cycle_count = 12 { 
+		write("Rice harvested, stop experiment.");
+		ask world {
+			do store_data_to_csv;
+			do storeBPH;
+			do calc_end_result_and_store;
+	   		do pause;
+   		}
+   		
 	}
 	
 	aspect default {
