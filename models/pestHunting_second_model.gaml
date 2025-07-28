@@ -114,6 +114,16 @@ global {
 		do initialise_variable;
 		//write("cycle: " + cycle);
 		
+		
+		// test
+		// check ui sticky note or grid
+//		list<rice_grid> rice_cell <-  rice_grid where(each.cell_value > 0);
+//		float cellRemaining <- 0.0;
+//		loop rc over: rice_cell {
+//			cellRemaining <- cellRemaining + rc.rice_crop.value;
+//		}
+//		write("remaining cell value: " + cellRemaining);
+		
 	}
 	
 	action initialise_variable {
@@ -329,22 +339,14 @@ global {
 		 * This function uses to update each cycle_count (7 days or a week)
 		 */
 		if (cycle_count < 2) {
-//			predation_rate <- (number_of_pest = 0) ? 0 : ((total_pest_eaten[length(total_pest_eaten)-1] / number_of_pest));
-//			add predation_rate to: predation_rates;
 			add 0.0 to: pest_non_resistants;
 		}
 		else if (cycle_count = 2) {
-			//pest_non_resistant <- 198.0;
 			add 198.0 to: pest_non_resistants;
-//			predation_rate <- number_of_pest = 0 ? 0 : (total_pest_eaten / number_of_pest);
-//			add predation_rate to: predation_rates;
 		}
 		else if (cycle_count > 2) {
 			//write("\npest non__resist in week: " + cycle_count);
 			float prev_predation_rate <- predation_rates[length(predation_rates) - 1]; // it will calc after this
-			//write("prev predation_rate: " + prev_predation_rate + " length: " + length(predation_rates));
-			//write("predation_rates: " + predation_rates);
-
 			int prev_treatment <- treatments[length(treatments) - 1];
 			//write("prev_treatment: " + prev_treatment);
 			//write("treatments: " + treatments);
@@ -442,13 +444,6 @@ global {
 			}
 		}
 		
-		
-//		create Parasitoid number: tmp_parasitoid;
-		
-//		write("number of parasitoid: " + tmp_parasitoid);
-//		write("number of test length: " + length(Parasitoid));
-		//write("number of parasitoids: " + parasitoids);
-		//add tmp_parasitoid to: parasitoids;
 	}
 	
 	action calc_potential_yield {
@@ -630,7 +625,6 @@ global {
 		write(l);
 		// TODO: edit this as a dynamic grid
 		return rectangle({l.x - 5, l.y - 5}, {l.x + 5, l.y + 5});
-		//return l;
 	}
 	
 }
@@ -639,20 +633,18 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8 { 
 //	rgb color <- #blue;
 //	float carrying_capacity;
 //	float biomass;
-//	int color_value <- 3;
 	rgb color <- #green;
 	float cell_value min: 0.0 max: 3.0 <- 3.0;
 	bool is_free <- true;
 	list<int> treatments <- [0,0,0,0,0,0,0,0,0,0,0,0,0];
+	//RiceCrop rice_crop;
 	//list<Insect> insects_inside <- (Predator + Pest + Predator) inside(self);
 	
 	
 	init {
-	//write "my column index is:" + grid_x;
-		//write("treatment: " + length(self.treatments));
-		
-		//write("insect inside: " + insects_inside);
+
 	}
+	
 	
 	list get_insects_inside {
 		return agents_inside(self);//(Predator + Pest + Predator) inside self;
@@ -675,6 +667,12 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8 { 
 		}
 	}
 	
+}
+
+species RiceCrop {
+	// use it in the gird represent as rice on grid
+	int value ;//min: 0 max: 3;// <- 3; // three crop per sigle grid
+	//list<int> treatments <- [0,0,0,0,0,0,0,0,0,0,0,0,0];
 }
 
 species Insect {
@@ -749,7 +747,7 @@ species Parasitoid parent: Insect {
 		}
 	}
 	
-	/*reflex eat when: num_pest_eaten_by_parasitoid < potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1] {
+	reflex eat when: num_pest_eaten_by_parasitoid < potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
 		loop p over: insectList {
 			if (num_pest_eaten_by_parasitoid = potential_pests_eaten_by_parasitoids[length(potential_pests_eaten_by_parasitoids)-1]) {break;}
@@ -762,7 +760,7 @@ species Parasitoid parent: Insect {
 			}
 			
 		}
-	}*/
+	}
 	
 	aspect default {
 		draw square(1) color: #black;
@@ -788,7 +786,7 @@ species Predator parent: Insect {
 		}
 	}
 	
-	/*reflex eat when: num_pest_eaten_by_predator < potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1] {
+	reflex eat when: num_pest_eaten_by_predator < potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1] {
 		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
 		loop p over: insectList {
 			if (num_pest_eaten_by_predator = potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1]) {break;}
@@ -801,7 +799,7 @@ species Predator parent: Insect {
 			}
 			
 		}
-	}*/
+	}
 	
 	aspect default {
 		draw square(1) color: #violet;
@@ -834,38 +832,20 @@ species Farmer {
 			// this calculation isn't related to current treatment
 			ask world {do sequential_var_calc;}
 			// apply treatment
-			if (cycle_count = 0 or cycle_count = 12) {
+			/*if (cycle_count = 0 or cycle_count = 12) {
 				add 0 to: treatments;
 			} else {
 				add 1 to: treatments;
-				list<rice_grid> rnd_grids <- get_fields_for_treatment();
-				add rnd_grids to: treatment_areas;
-				//list<pair<string, int>> insect_list <- []; // list of insect here
-				//write("random cell: " + length(rnd_grids));
-				loop rc over: rnd_grids {
-					//write("random grid: " + rnd_grids[i]);
-					//rice_grid rg <- rice_grid grid_at rnd_grids[i];
-					do create_treatment_area(rc.location);
-					list<Insect> insect_on_grid <- rc.get_insects_inside();
-					insect_on_grid <- insect_on_grid where (each!=nil); // remove nil
-					insect_on_grid >>- 0; // remove nill from list
-					//insect_on_grid <- remove nill from: insect_on_grid;
-					write("insect inside grid: " + insect_on_grid);
-					ask rc {
-						put 1 in: self.treatments at: cycle_count;
-					}
-					// TODO: each grid store data and compute only treatment area
-				}
-				
-			}
+				//do in_between_treatment_decision;
+			}*/
 			
-			/*if (cycle_count = 0 or cycle_count = 12) {
+			if (cycle_count = 0 or cycle_count = 12) {
 				add 0 to: treatments;
 			} else {
 				bool confirm <- user_confirm("Spray","Please confirm, Would you spray or not?");
 				write("user confirm: " + confirm);
 				add confirm ? 1 : 0 to: treatments;
-			}*/
+			}
 			
 			//do action: sequential_var_calc;
 			//write("treatment list: " + treatments);
@@ -873,15 +853,30 @@ species Farmer {
 			ask world {do check;}
 			//ask world {do get_total_prev_treatment();}
 			is_farmer_decided <- true;
+	}
+	
+	action in_between_treatment_decision {
+		list<rice_grid> rnd_grids <- get_fields_for_treatment();
+		add rnd_grids to: treatment_areas;
+		//list<pair<string, int>> insect_list <- []; // list of insect here
+		//write("random cell: " + length(rnd_grids));
+		loop rc over: rnd_grids {
+			//write("random grid: " + rnd_grids[i]);
+			//rice_grid rg <- rice_grid grid_at rnd_grids[i];
+			do create_treatment_area(rc.location);
+			list<Insect> insect_on_grid <- rc.get_insects_inside();
+			insect_on_grid <- insect_on_grid where (each!=nil); // remove nil
+			insect_on_grid >>- 0; // remove nill from list
+			//insect_on_grid <- remove nill from: insect_on_grid;
+			write("insect inside grid: " + insect_on_grid);
+			ask rc {
+				put 1 in: self.treatments at: cycle_count;
+			}
+			// TODO: each grid store data and compute only treatment area
 		}
-	
-	// ui action
-	
-	
+	}
 	
 	action create_treatment_area(point l){
-//		int j <- rnd(6);
-//		stats[next_te] <- stats[next_te] + 1;
 		create TreatmentArea {
 			color <-  #transparent;//tet_colors[i];
 			location <- l;//{15,10}
@@ -909,7 +904,7 @@ species Farmer {
 		add rnd_one_field to: rice_cell;
 		//rice_cell <- rice_cell sort_by each;
 		
-		write("rice cell: " + length(rice_cell));
+		//write("rice cell: " + length(rice_cell));
 		int remainingCell <- target_grid - length(rice_cell);
 		if (remainingCell != 0) {
 			// need to select more
@@ -921,11 +916,11 @@ species Farmer {
 					//write("limit cell");
 					rice_cell <- (rice_cell sort_by each);
 					rice_cell <- rice_cell[0::10];
-					write("rice cell size: " + length(rice_cell));
+					//write("rice cell size: " + length(rice_cell));
 //					rice_cell <- rice_cell sublist 0 number: 10;
 				}
 			}
-			write("rice cell: " + rice_cell);
+			//write("rice cell: " + rice_cell);
 		}
 		
 		return rice_cell;
@@ -1026,15 +1021,6 @@ experiment Experiment type: gui{
 				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}
 		}
-		
-		// change this to on init cause it needs to start the programme
-		/*display plot_crop_yield_each_cycle type: 2d refresh:every(per_cycle_count#cycles){ // skip(1#cycles)
-				chart "Crop Yield" type: series {
-				    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
-				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
-				}
-		}*/
-		
 		
 	}
 	
