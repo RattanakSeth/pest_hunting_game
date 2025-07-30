@@ -241,7 +241,7 @@ global {
 	}
 	
 	action storeBPH {
-		string BPH_path <-"../results/BPH.csv"; 
+		string BPH_path <-"../results/BPH.csv";
 		if file_exists(BPH_path){ 
 			write "File exists in the computer";
 			bool delete_file_ok <- delete_file(BPH_path);
@@ -565,6 +565,10 @@ global {
 		write("real yield in tons: " + real_yield_in_tons);
 		write("max dynamic_yield: " + max_dynamic_yields);
 		*/
+		write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids[cycle_count]);
+		write("potential pest eaten by predators: " + potential_pests_eaten_by_predators[cycle_count]);
+		write("num_pest_eaten_by_predator: " + num_pest_eaten_by_predator);
+		write("num_pest_eaten_by_parasitoid: " + num_pest_eaten_by_parasitoid);
 	}
 	
 	action calc_end_result_and_store {
@@ -622,7 +626,7 @@ global {
 	}
 	
 	geometry select_shape(point l) {
-		write(l);
+		//write(l);
 		// TODO: edit this as a dynamic grid
 		return rectangle({l.x - 5, l.y - 5}, {l.x + 5, l.y + 5});
 	}
