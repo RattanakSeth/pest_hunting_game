@@ -20,8 +20,7 @@ global {
 	rgb PEST_COLOR const: true <- #red;
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
-	int number_of_parasitoids <- 25;
-	int number_of_predator <- 7;
+
 	float step <- 1 #week;
 	//float hour <- 0.0;
 	//int day <- 0;
@@ -67,7 +66,7 @@ global {
 	list<float> potential_pests_eaten_by_predators <- []; // maximum of predators to eat pest
 	list<float> total_pest_eaten <- []; // program start need this
 	list<float> pests_total <- []; // program start need this
-	list<float> predators <- [7.00];
+	list<float> predators <- [];
 	list<float> parasitoids <- [];
 	list<float> total_potential_pests_eaten <- [];
 	list<float> field_cases <- [];
@@ -79,9 +78,11 @@ global {
 	list<float> potential_parasitoids <- [];
 	list<float> potential_predators <- [];
 	
-	// Rice field
+	// Input params
 	int rice_field_width <- 10;
 	int rice_field_height <- 10;
+	int number_of_parasitoid <- 25;
+	int number_of_predator <- 7;
 	
 	// In between treatment store
 	list treatment_areas <- [];
@@ -96,7 +97,7 @@ global {
 
 		}
 		
-		create Parasitoid number: number_of_parasitoids {
+		create Parasitoid number: number_of_parasitoid {
 //			current_cell <- one_of(rice_grid);
 //			location <- current_cell.location;
 //			current_cell.is_free <- false;
@@ -257,7 +258,7 @@ global {
 	
 	action calc_potential_parasitoid {
 		if (cycle_count = 0) {
-			add 25 to: potential_parasitoids;
+			add number_of_parasitoid to: potential_parasitoids;
 		} else {
 			add (parasitoids[length(parasitoids) - 2] * normal_reproduction_rate_parasitoid) to: potential_parasitoids;
 		}
@@ -266,7 +267,7 @@ global {
 	
 	action calc_potential_predator {
 		if (cycle_count = 0) {
-			add 7 to: potential_predators;
+			add number_of_predator to: potential_predators;
 		} else {
 			add (predators[length(predators) - 2] * normal_reproduction_rate_predator) to: potential_predators;
 		}
@@ -308,6 +309,9 @@ global {
 	}
 	
 	action update_predators {
+		if (cycle_count = 0 ) {
+			add number_of_predator to: predators;
+		}
 		if (cycle_count > 0) {
 			//write("cycle: " + cycle_count + "predator: " + (treatments[length(treatments) - 2] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
 			float num_predator <- ((treatments[length(treatments) - 1] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
@@ -425,7 +429,7 @@ global {
 	
 	action update_parasitoids {
 		if (cycle_count = 0) {
-			add 25 to: parasitoids;
+			add number_of_parasitoid to: parasitoids;
 		} else {
 			float prev_total_potential_pests_eaten <- total_potential_pests_eaten[length(total_potential_pests_eaten)-1];
 			float prev_total_pest_eaten <- total_pest_eaten[length(total_pest_eaten) - 1];
@@ -462,7 +466,7 @@ global {
 	
 	action calc_sticky_notes_need_to_remove {
 		if (cycle_count < 1) {
-			add 300 to: remove_sticky_notes;
+			add field_cases[0] to: remove_sticky_notes;
 			return;
 		}
 
@@ -571,7 +575,7 @@ global {
 		float stickyNoteRemaining <- sum(remove_sticky_notes);
 		write("sticky note remaining: " + round(stickyNoteRemaining));
 		
-		float finalYield <- 5 * stickyNoteRemaining / 300;
+		float finalYield <- 5 * stickyNoteRemaining / field_cases[0];
 		write("Final yeild (t/ha): " + finalYield);
 		
 		// verify sticky note remove for ui only
@@ -968,6 +972,8 @@ species Farmer {
 experiment Experiment type: gui{
 	parameter "Width of rice field" var: rice_field_width <- 10;
 	parameter "Height of rice field" var: rice_field_height <- 10;
+	parameter "Number of parasitoid" var: number_of_parasitoid;
+	parameter "Number of predator" var: number_of_predator;
 	
 	output {
 		display riceField type: java2D{
