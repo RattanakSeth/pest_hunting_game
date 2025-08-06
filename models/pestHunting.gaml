@@ -845,7 +845,7 @@ species Farmer {
 	}
 }
 
-experiment Experiment type: gui{
+experiment Basic type: gui{
 	parameter "Width of rice field" var: rice_field_width <- 10;
 	parameter "Height of rice field" var: rice_field_height <- 10;
 	parameter "Number of parasitoid" var: number_of_parasitoid;
