@@ -5,6 +5,8 @@
 * Tags: second model, model improvement
 * Base on research and game formula on the excel file
 * Using grid represent as a rice fields
+* 
+* TODO: next
 * Spray will be in between (select 10 grid for first initial)
 */
 
@@ -12,16 +14,16 @@
 model pestHuntingsecondmodel
 
 global {
-	//rgb HEALTHY_COLOR const: true <- rgb(0, 176, 80);
-	//rgb SLIGHTLY_DIMAGE_COLOR const: true <- rgb(221, 235, 247);
-	//rgb HEAVY_DIMAGE_COLOR const: true <- rgb(242, 220, 219);
 	rgb PARASITOID_COLOR const: true <- #black;
 	rgb PREDATOR_COLOR const: true <- #violet;
 	rgb PEST_COLOR const: true <- #red;
+	string NONE const: true <- 'none';//["none","all","second week"]
+	string ALL_WEEK const: true <- 'All weeks';
+	string ONLY_2ND_WEEK const: true <- 'Only 2nd week';
+	
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
-	int number_of_parasitoids <- 25;
-	int number_of_predator <- 7;
+
 	float step <- 1 #week;
 	//float hour <- 0.0;
 	//int day <- 0;
@@ -67,7 +69,7 @@ global {
 	list<float> potential_pests_eaten_by_predators <- []; // maximum of predators to eat pest
 	list<float> total_pest_eaten <- []; // program start need this
 	list<float> pests_total <- []; // program start need this
-	list<float> predators <- [7.00];
+	list<float> predators <- [];
 	list<float> parasitoids <- [];
 	list<float> total_potential_pests_eaten <- [];
 	list<float> field_cases <- [];
@@ -79,14 +81,22 @@ global {
 	list<float> potential_parasitoids <- [];
 	list<float> potential_predators <- [];
 	
-	// Rice field
+	// Input params
 	int rice_field_width <- 10;
 	int rice_field_height <- 10;
+	int number_of_parasitoid <- 25;
+	int number_of_predator <- 7;
 	
 	// In between treatment store
 	list treatment_areas <- [];
 	
 	// UI Initialise
+	
+	// Experiment variable
+	bool is_interacted <- true;
+	bool is_spray_all_time <- true;
+	string spray;
+	//bool 
 //	geometry shape <- rectangle(20,30);
 	init {
 		create Pest  number: number_of_pest {
@@ -96,7 +106,7 @@ global {
 
 		}
 		
-		create Parasitoid number: number_of_parasitoids {
+		create Parasitoid number: number_of_parasitoid {
 //			current_cell <- one_of(rice_grid);
 //			location <- current_cell.location;
 //			current_cell.is_free <- false;
@@ -123,6 +133,7 @@ global {
 //			cellRemaining <- cellRemaining + rc.rice_crop.value;
 //		}
 //		write("remaining cell value: " + cellRemaining);
+		write("is interacted: " + is_interacted);
 		
 	}
 	
@@ -257,7 +268,7 @@ global {
 	
 	action calc_potential_parasitoid {
 		if (cycle_count = 0) {
-			add 25 to: potential_parasitoids;
+			add number_of_parasitoid to: potential_parasitoids;
 		} else {
 			add (parasitoids[length(parasitoids) - 2] * normal_reproduction_rate_parasitoid) to: potential_parasitoids;
 		}
@@ -266,7 +277,7 @@ global {
 	
 	action calc_potential_predator {
 		if (cycle_count = 0) {
-			add 7 to: potential_predators;
+			add number_of_predator to: potential_predators;
 		} else {
 			add (predators[length(predators) - 2] * normal_reproduction_rate_predator) to: potential_predators;
 		}
@@ -308,6 +319,9 @@ global {
 	}
 	
 	action update_predators {
+		if (cycle_count = 0 ) {
+			add number_of_predator to: predators;
+		}
 		if (cycle_count > 0) {
 			//write("cycle: " + cycle_count + "predator: " + (treatments[length(treatments) - 2] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
 			float num_predator <- ((treatments[length(treatments) - 1] = 1 ? normal_survival_pesticides_predator : 1) * predators[length(predators) - 1] * normal_reproduction_rate_predator);
@@ -425,7 +439,7 @@ global {
 	
 	action update_parasitoids {
 		if (cycle_count = 0) {
-			add 25 to: parasitoids;
+			add number_of_parasitoid to: parasitoids;
 		} else {
 			float prev_total_potential_pests_eaten <- total_potential_pests_eaten[length(total_potential_pests_eaten)-1];
 			float prev_total_pest_eaten <- total_pest_eaten[length(total_pest_eaten) - 1];
@@ -462,7 +476,7 @@ global {
 	
 	action calc_sticky_notes_need_to_remove {
 		if (cycle_count < 1) {
-			add 300 to: remove_sticky_notes;
+			add field_cases[0] to: remove_sticky_notes;
 			return;
 		}
 
@@ -575,8 +589,8 @@ global {
 		float stickyNoteRemaining <- sum(remove_sticky_notes);
 		write("sticky note remaining: " + round(stickyNoteRemaining));
 		
-		float finalYield <- 5 * stickyNoteRemaining / 300;
-		write("Final yeild (t/ha): " + finalYield);
+		float finalYield <- 5 * stickyNoteRemaining / field_cases[0];
+		write("Final yield (t/ha): " + finalYield);
 		
 		// verify sticky note remove for ui only
 		do check_last_sticky_note;
@@ -630,6 +644,39 @@ global {
 		// TODO: edit this as a dynamic grid
 		return rectangle({l.x - 5, l.y - 5}, {l.x + 5, l.y + 5});
 	}
+	
+	// interactio part
+	action decide_to_spray {
+		write("decide to spray");
+		do sequential_var_calc;
+		add 1 to: treatments;
+		ask world {do check;}
+		is_farmer_decided <- true;
+//		event "y" {ask simulation { do decide_to_spray;}}
+	}
+	
+	action decide_not_to_spray {
+		do sequential_var_calc;
+		add 0 to: treatments;
+		ask world {do check;}
+		is_farmer_decided <- true;
+	}
+//	action farmer_decision when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
+//			write("\nWeeks: " + cycle_count);
+//			// this calculation isn't related to current treatment
+//			ask world {do sequential_var_calc;}
+//			
+//			// apply treatment
+//			if (cycle_count = 0 or cycle_count = 12) {
+//				add 0 to: treatments;
+//			} else {
+//				add 1 to: treatments;
+//				
+//			}
+//			ask world {do check;}
+//			//ask world {do get_total_prev_treatment();}
+//			is_farmer_decided <- true;
+//	}
 	
 }
 
@@ -830,6 +877,10 @@ species TreatmentArea {
 }
 
 species Farmer {
+	
+	init {
+		write("farmer species init");
+	}
 
 	reflex farmer_decision when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
 			write("\nWeeks: " + cycle_count);
@@ -843,12 +894,14 @@ species Farmer {
 				//do in_between_treatment_decision;
 			}*/
 			
-			if (cycle_count = 0 or cycle_count = 12) {
-				add 0 to: treatments;
-			} else {
-				bool confirm <- user_confirm("Spray","Please confirm, Would you spray or not?");
-				write("user confirm: " + confirm);
-				add confirm ? 1 : 0 to: treatments;
+			if (is_interacted) {
+				do interact_from_participant;
+			} else if (spray = ALL_WEEK) {
+				do spray_all_the_time;
+			} else if (spray = ONLY_2ND_WEEK) {
+				do spray_only_second_week;
+			} else if (spray = NONE) {
+				do do_not_spray;
 			}
 			
 			//do action: sequential_var_calc;
@@ -857,6 +910,46 @@ species Farmer {
 			ask world {do check;}
 			//ask world {do get_total_prev_treatment();}
 			is_farmer_decided <- true;
+	}
+	
+	action do_not_spray {
+		if (cycle_count = 0 or cycle_count = 12) {
+				add 0 to: treatments;
+		} else {
+			add 0 to: treatments;
+		}
+		
+	}
+	
+	
+	action spray_all_the_time {
+		if (cycle_count = 0 or cycle_count = 12) {
+				add 0 to: treatments;
+		} else {
+			add 1 to: treatments;
+		}
+		
+	}
+	
+	action spray_only_second_week {
+		if (cycle_count = 0 or cycle_count = 12) {
+				add 0 to: treatments;
+		} else if (cycle_count = 1) {
+			add 1 to: treatments;
+		} else {
+			add 0 to: treatments;
+		}
+		
+	}
+	
+	action interact_from_participant {
+		if (cycle_count = 0 or cycle_count = 12) {
+				add 0 to: treatments;
+			} else {
+				bool confirm <- user_confirm("Spray","Please confirm, Would you spray or not?");
+				write("user confirm: " + confirm);
+				add confirm ? 1 : 0 to: treatments;
+			}
 	}
 	
 	action in_between_treatment_decision {
@@ -891,8 +984,6 @@ species Farmer {
 //				do die;
 //			}
 		}
-		
-
 	}
 	
 	list<rice_grid> get_fields_for_treatment{
@@ -928,29 +1019,6 @@ species Farmer {
 		}
 		
 		return rice_cell;
-		/* 
-		list<point> rnd_grids <- [];
-		rice_grid rnd_cell <- one_of(rice_grid);
-		add {rnd_cell.grid_x, rnd_cell.grid_y} to: rnd_grids;
-		write("random x: " + rnd_cell.grid_x);
-		int next_cell <- 8;
-		int start <- 0;
-		int start_x <- rnd_cell.grid_x;
-		int start_y <- rnd_cell.grid_y;
-		loop i from: 0 to: next_cell {
-			start_x <- start_x + 1;
-			if (start_x > 9) {
-				start_x <- 0;
-				start_y <- start_y + 1;
-				if (start_y > 9) {
-					start_y <- 0;
-				}
-			}
-			add {start_x, start_y} to: rnd_grids;
-		}
-		
-		return rnd_grids;
-		*/
 	}
 	
 	reflex stop_experiment when: cycle_count = 12 { 
@@ -969,18 +1037,48 @@ species Farmer {
 	}
 }
 
-experiment Experiment type: gui{
+species ExperimentFarmerAllTreatment {
+
+	reflex farmer_decision when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
+			write("\nWeeks: " + cycle_count);
+			// this calculation isn't related to current treatment
+			ask world {do sequential_var_calc;}
+			
+			// apply treatment
+			if (cycle_count = 0 or cycle_count = 12) {
+				add 0 to: treatments;
+			} else {
+				add 1 to: treatments;
+				
+			}
+			ask world {do check;}
+			//ask world {do get_total_prev_treatment();}
+			is_farmer_decided <- true;
+	}
+	
+}
+
+experiment Base virtual: true {
 	parameter "Width of rice field" var: rice_field_width <- 10;
 	parameter "Height of rice field" var: rice_field_height <- 10;
-	
+	parameter "Number of parasitoid" var: number_of_parasitoid;
+	parameter "Number of predator" var: number_of_predator;
+}
+
+experiment Experiment type: gui parent: Base{
+	parameter "Interactive" category:"Pesticide" var: is_interacted <- true disables: [spray];
+	parameter "Spary decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_2ND_WEEK];
 	output {
-		display riceField type: java2D{
+		display riceField {
 			grid rice_grid border: #lightgray;// lines: #black;
 			species Pest;
 			species Parasitoid;
 			species Predator;
 			species TreatmentArea;
 			species Farmer;
+			// TODO: initialise to ask params and change for experiment
+//			event "y" {ask simulation { do decide_to_spray;}}
+//			event "n" {ask simulation { do decide_not_to_spray;}}
 			
 				overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
 	            {
@@ -1030,3 +1128,117 @@ experiment Experiment type: gui{
 	
 }
 
+experiment NoTreatment type: gui parent: Base {
+//	parameter "Width of rice field" var: rice_field_width <- 10;
+//	parameter "Height of rice field" var: rice_field_height <- 10;
+//	parameter "Number of parasitoid" var: number_of_parasitoid;
+//	parameter "Number of predator" var: number_of_predator;
+	parameter "Interactive" category:"Pesticide" var: is_interacted <- false read_only: true;
+	parameter "Spary decision" category:"Pesticide" var: spray <- NONE read_only: true;
+	
+	output {
+		layout #split editors: false;
+		display riceField2 {
+			grid rice_grid border: #lightgray;// lines: #black;
+			species Pest;
+			species Parasitoid;
+			species Predator;
+			species TreatmentArea;
+			species Farmer;
+//			species ExperimentFarmerNoTreatment;
+			
+			/*overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
+            {
+                float y <- 30#px;
+
+                draw square(10#px) at: { 20#px, y } color:PREDATOR_COLOR  border: #white;
+                draw "Predator " + '(' + length(Predator) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw square(10#px) at: { 20#px, y } color:PARASITOID_COLOR  border: #white;
+                draw "Parasitoid (" + length(Parasitoid) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw square(10#px) at: { 20#px, y } color:PEST_COLOR  border: #white;
+                draw "Pest (" + length(Pest) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw "Weeks: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+			}*/
+		
+		}
+		
+		// every 28 cycles equal to one cycle count ( a week)
+		/*display plots type: 2d refresh:every(per_cycle_count#cycles){
+				chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
+				    data "Pest" value: length(Pest) color: PEST_COLOR;
+				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
+				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
+				    data "Treatment" value: (treatments[cycle_count] = 1 ? treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
+				}
+				
+				chart "Crop Yield" size: {1,0.5} position: {0,0.5} type: series {
+				    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+				}
+		}*/
+		
+	}
+}
+
+
+experiment TreatmentAll {
+	parameter "Interactive" category:"Pesticide" var: is_interacted <- false read_only: true;
+	parameter "Spary decision" category:"Pesticide" var: spray <- ALL_WEEK read_only: true;
+	
+	output {
+		layout #split editors: false;
+		display riceField2 {
+			grid rice_grid border: #lightgray;// lines: #black;
+			species Pest;
+			species Parasitoid;
+			species Predator;
+			species TreatmentArea;
+			species Farmer;
+//			species ExperimentFarmerNoTreatment;
+			
+			/*overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
+            {
+                float y <- 30#px;
+
+                draw square(10#px) at: { 20#px, y } color:PREDATOR_COLOR  border: #white;
+                draw "Predator " + '(' + length(Predator) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw square(10#px) at: { 20#px, y } color:PARASITOID_COLOR  border: #white;
+                draw "Parasitoid (" + length(Parasitoid) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw square(10#px) at: { 20#px, y } color:PEST_COLOR  border: #white;
+                draw "Pest (" + length(Pest) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw "Weeks: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+			}*/
+		
+		}
+		
+		// every 28 cycles equal to one cycle count ( a week)
+		/*display plots type: 2d refresh:every(per_cycle_count#cycles){
+				chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
+				    data "Pest" value: length(Pest) color: PEST_COLOR;
+				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
+				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
+				    data "Treatment" value: (treatments[cycle_count] = 1 ? treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
+				}
+				
+				chart "Crop Yield" size: {1,0.5} position: {0,0.5} type: series {
+				    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+				}
+		}*/
+		
+	}
+}
