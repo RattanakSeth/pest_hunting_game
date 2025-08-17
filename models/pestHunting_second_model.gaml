@@ -6,8 +6,6 @@
 * Base on research and game formula on the excel file
 * Using grid represent as a rice fields
 * Separate experment for consideration senario
-* TODO: next
-* Spray will be in between (select 10 grid for first initial)
 */
 
 
@@ -19,7 +17,7 @@ global {
 	rgb PEST_COLOR const: true <- #red;
 	string NONE const: true <- 'none';//["none","all","second week"]
 	string ALL_WEEK const: true <- 'All weeks';
-	string ONLY_2ND_WEEK const: true <- 'Only 2nd week';
+	string ONLY_1ST_WEEK const: true <- 'Only 1st week';
 	
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
@@ -828,11 +826,13 @@ species Predator parent: Insect {
 			//write("not nil, so have pest neighbour. " +  tmp_cell);
 			current_cell <- tmp_cell;
 			location <- current_cell.location;
+			current_cell.is_free <- false;
 		} else {
 			//write("nil");
 			// check other location
 			current_cell <- one_of(current_cell.neighbors);
 			location <- current_cell.location;
+			current_cell.is_free <- false;
 		}
 	}
 	
@@ -878,7 +878,7 @@ species TreatmentArea {
 species Farmer {
 	
 	init {
-		write("farmer species init");
+		//write("farmer species init");
 	}
 
 	reflex farmer_decision when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
@@ -897,7 +897,7 @@ species Farmer {
 				do interact_from_participant;
 			} else if (spray = ALL_WEEK) {
 				do spray_all_the_time;
-			} else if (spray = ONLY_2ND_WEEK) {
+			} else if (spray = ONLY_1ST_WEEK) {
 				do spray_only_second_week;
 			} else if (spray = NONE) {
 				do do_not_spray;
@@ -1073,7 +1073,7 @@ experiment Base virtual: true {
 
 experiment Experiment type: gui parent: Base{
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- true disables: [spray];
-	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_2ND_WEEK];
+	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK];
 	output {
 		display riceField {
 			grid rice_grid border: #lightgray;// lines: #black;
@@ -1265,12 +1265,12 @@ experiment "Treatment All" parent: Base{
 	}
 }
 
-experiment "Only 2nd Week" parent: Base {
+experiment "Only 1st Week" parent: Base {
 //	parameter "Interactive" category:"Pesticide" var: is_interacted <- false read_only: true;
 //	parameter "Spary decision" category:"Pesticide" var: spray <- ALL_WEEK read_only: true;
 	init {
 		is_interacted <- false;
-		spray <- ONLY_2ND_WEEK;
+		spray <- ONLY_1ST_WEEK;
 	}
 	
 	output {
