@@ -18,6 +18,17 @@ global {
 	string NONE const: true <- 'none';//["none","all","second week"]
 	string ALL_WEEK const: true <- 'All weeks';
 	string ONLY_1ST_WEEK const: true <- 'Only 1st week';
+	string ONLY_2ND_WEEK const: true <- 'Only 2nd week';
+	string ONLY_3RD_WEEK const: true <- 'Only 3rd week';
+	string ONLY_4TH_WEEK const: true <- 'Only 4th week';
+	string ONLY_5TH_WEEK const: true <- 'Only 5th week';
+	string ONLY_6TH_WEEK const: true <- 'Only 6th week';
+	string ONLY_7TH_WEEK const: true <- 'Only 7th week';
+	string ONLY_8TH_WEEK const: true <- 'Only 8th week';
+	string ONLY_9TH_WEEK const: true <- 'Only 9th week';
+	string ONLY_10TH_WEEK const: true <- 'Only 10th week';
+	string ONLY_11TH_WEEK const: true <- 'Only 11th week';
+	
 	
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
@@ -105,15 +116,9 @@ global {
 		}
 		
 		create Parasitoid number: number_of_parasitoid {
-//			current_cell <- one_of(rice_grid);
-//			location <- current_cell.location;
-//			current_cell.is_free <- false;
 		}
 		
 		create Predator number: number_of_predator {
-//			current_cell <- one_of(rice_grid);
-//			location <- current_cell.location;
-//			current_cell.is_free <- false;
 		}
 		
 		create Farmer;
@@ -121,17 +126,6 @@ global {
 		// initial variable
 		do initialise_variable;
 		//write("cycle: " + cycle);
-		
-		
-		// test
-		// check ui sticky note or grid
-//		list<rice_grid> rice_cell <-  rice_grid where(each.cell_value > 0);
-//		float cellRemaining <- 0.0;
-//		loop rc over: rice_cell {
-//			cellRemaining <- cellRemaining + rc.rice_crop.value;
-//		}
-//		write("remaining cell value: " + cellRemaining);
-		
 	}
 	
 	action initialise_variable {
@@ -587,7 +581,7 @@ global {
 		write("sticky note remaining: " + round(stickyNoteRemaining));
 		
 		float finalYield <- 5 * stickyNoteRemaining / field_cases[0];
-		write("Final yield (t/ha): " + finalYield);
+		write("Final yield (t/ha): " + finalYield with_precision 2);
 		
 		// verify sticky note remove for ui only
 		do check_last_sticky_note;
@@ -882,7 +876,7 @@ species Farmer {
 	}
 
 	reflex farmer_decision when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
-			write("\nWeeks: " + cycle_count + "reflex work");
+			//write("\nWeeks: " + cycle_count + "reflex work");
 			// this calculation isn't related to current treatment
 			ask world {do sequential_var_calc;}
 			// apply treatment
@@ -898,7 +892,27 @@ species Farmer {
 			} else if (spray = ALL_WEEK) {
 				do spray_all_the_time;
 			} else if (spray = ONLY_1ST_WEEK) {
-				do spray_only_second_week;
+				do spray_only_week(1);
+			} else if (spray = ONLY_2ND_WEEK) {
+				do spray_only_week(2);
+			} else if (spray = ONLY_3RD_WEEK){
+				do spray_only_week(3);
+			} else if (spray = ONLY_4TH_WEEK) {
+				do spray_only_week(4);
+			} else if (spray = ONLY_5TH_WEEK) {
+				do spray_only_week(5);
+			} else if (spray = ONLY_6TH_WEEK) {
+				do spray_only_week(6);
+			} else if (spray = ONLY_7TH_WEEK) {
+				do spray_only_week(7);
+			} else if (spray = ONLY_8TH_WEEK) {
+				do spray_only_week(8);
+			} else if (spray = ONLY_9TH_WEEK) {
+				do spray_only_week(9);
+			} else if (spray = ONLY_10TH_WEEK) {
+				do spray_only_week(10);
+			} else if (spray = ONLY_11TH_WEEK) {
+				do spray_only_week(11);
 			} else if (spray = NONE) {
 				do do_not_spray;
 			}
@@ -913,27 +927,37 @@ species Farmer {
 	
 	action do_not_spray {
 		if (cycle_count = 0 or cycle_count = 12) {
-				add 0 to: treatments;
+			add 0 to: treatments;
 		} else {
 			add 0 to: treatments;
 		}
-		
 	}
 	
 	
 	action spray_all_the_time {
 		if (cycle_count = 0 or cycle_count = 12) {
-				add 0 to: treatments;
+			add 0 to: treatments;
 		} else {
 			add 1 to: treatments;
 		}
 		
 	}
 	
-	action spray_only_second_week {
+//	action spray_only_first_week {
+//		if (cycle_count = 0 or cycle_count = 12) {
+//				add 0 to: treatments;
+//		} else if (cycle_count = 1) {
+//			add 1 to: treatments;
+//		} else {
+//			add 0 to: treatments;
+//		}
+//		
+//	}
+	
+	action spray_only_week(int week_num) {
 		if (cycle_count = 0 or cycle_count = 12) {
-				add 0 to: treatments;
-		} else if (cycle_count = 1) {
+			add 0 to: treatments;
+		} else if (cycle_count = week_num) {
 			add 1 to: treatments;
 		} else {
 			add 0 to: treatments;
@@ -1073,7 +1097,7 @@ experiment Base virtual: true {
 
 experiment Experiment type: gui parent: Base{
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- true disables: [spray];
-	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK];
+	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
 	output {
 		display riceField {
 			grid rice_grid border: #lightgray;// lines: #black;
@@ -1248,7 +1272,7 @@ experiment "Treatment All" parent: Base{
 		}
 		
 		// every 28 cycles equal to one cycle count ( a week)
-		/*display plots type: 2d refresh:every(per_cycle_count#cycles){
+		display plots type: 2d refresh:every(per_cycle_count#cycles){
 				chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
 				    data "Pest" value: length(Pest) color: PEST_COLOR;
 				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
@@ -1260,7 +1284,7 @@ experiment "Treatment All" parent: Base{
 				    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}
-		}*/
+		}
 		
 	}
 }
