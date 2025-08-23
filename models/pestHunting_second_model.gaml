@@ -104,6 +104,7 @@ global {
 	// Experiment variable
 	bool is_interacted <- true;
 	bool is_spray_all_time <- true;
+	bool is_batch_experiment <- false;
 	string spray;
 	//bool 
 //	geometry shape <- rectangle(20,30);
@@ -121,7 +122,11 @@ global {
 		create Predator number: number_of_predator {
 		}
 		
-		create Farmer;
+		if (!is_batch_experiment) {
+			create Farmer;
+		} else {
+			create Farmer;
+		}
 		
 		// initial variable
 		do initialise_variable;
@@ -967,12 +972,12 @@ species Farmer {
 	
 	action interact_from_participant {
 		if (cycle_count = 0 or cycle_count = 12) {
-				add 0 to: treatments;
-			} else {
-				bool confirm <- user_confirm("Spray","Please confirm, Would you spray or not?");
-				write("user confirm: " + confirm);
-				add confirm ? 1 : 0 to: treatments;
-			}
+			add 0 to: treatments;
+		} else {
+			bool confirm <- user_confirm("Spray","Please confirm, Would you spray or not?");
+			write("user confirm: " + confirm);
+			add confirm ? 1 : 0 to: treatments;
+		}
 	}
 	
 	action in_between_treatment_decision {
@@ -1323,5 +1328,63 @@ experiment "Only 1st Week" parent: Base {
 				}
 		}
 		
+	}
+}
+
+experiment "Batch Experiment" parent: Base {
+	init {
+		// FOR SELF
+		is_interacted <- false;
+		spray <- ONLY_2ND_WEEK;
+		
+		create pestHuntingsecondmodel_model {
+			is_interacted <- false;
+			spray <- ONLY_1ST_WEEK;
+			is_batch_experiment <- true; // only decide a batch experiment
+		}
+		
+		create pestHuntingsecondmodel_model {
+			is_interacted <- false;
+			spray <- ONLY_3RD_WEEK;
+			is_batch_experiment <- true; // only decide a batch experiment
+		}
+	}
+	
+	output {
+		display riceField {
+			grid rice_grid border: #lightgray;// lines: #black;
+			species Pest;
+			species Parasitoid;
+			species Predator;
+			species TreatmentArea;
+			species Farmer;
+			
+			overlay position: { 5, 5 } size: { 180 #px, 150 #px } background: # black transparency: 0.5 border: #black rounded: true
+            {
+                float y <- 30#px;
+
+                draw square(10#px) at: { 20#px, y } color:PREDATOR_COLOR  border: #white;
+                draw "Predator " + '(' + length(Predator) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw square(10#px) at: { 20#px, y } color:PARASITOID_COLOR  border: #white;
+                draw "Parasitoid (" + length(Parasitoid) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw square(10#px) at: { 20#px, y } color:PEST_COLOR  border: #white;
+                draw "Pest (" + length(Pest) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw "Weeks: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw "Spray: " + spray at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+			}
+			
+			// TODO: farmer owned their own field
+			// Now experiment base on all field as a hactar grid. each farmer has a hactar
+//			species ExperimentFarmerNoTreatment;
+		}
 	}
 }
