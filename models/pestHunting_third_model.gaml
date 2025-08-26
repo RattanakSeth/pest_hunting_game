@@ -32,13 +32,13 @@ global {
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
 
-	float step <- 1 #week;
+	float step <-  12#hour;//1#week;
 	geometry shape <- square(1000);
-	//float hour <- 0.0;
-	//int day <- 0;
+	float hour <- 0;
+	int day <- 0;
 	int cycle_count <- 0; // cycle count
 	int cycle <- 0;
-	int per_cycle_count <- int(24 / (step/3600) * 7);
+	int per_cycle_count <- int(24 / (step/3600) * 7); // 1 week
 	
 	// initialise variable
 	// parasitoid
@@ -80,42 +80,51 @@ global {
 	string spray;
 	int num_paddy_field <- 0;
 	
+	// new variable
+	float perceipt_radius <- 20.0;
+	
 	init {
 		// initial variable
 		//write("cycle: " + cycle);
-		create RicePaddy number: 4 {
+		create RicePaddy number: 1 {
 			paddyField <- one_of(PaddyField where (each.is_free));
 			if (paddyField = nil) {
 				paddyField <- one_of(PaddyField);
 			}
 			location <- paddyField.location;
 			paddyField.is_free <- false;
+			paddyField.ricePaddy <- self;
 			id <- paddyField.index;
 			write("init: " + id);
 			
 			create Pest  number: number_of_pest returns: listPest {
-				paddyField <- myself.paddyField;
-				location <- paddyField.location;
+				cell <- myself.paddyField;
+				location <- any_location_in(cell.shape);//paddyField.location;
 				paddyFieldId <- myself.id;
 			}
-			create Parasitoid number: number_of_parasitoid {
-				paddyField <- myself.paddyField;
-				location <- paddyField.location;
+			create Parasitoid number: number_of_parasitoid returns: listParasitoid {
+				cell <- myself.paddyField;
+				location <- any_location_in(cell.shape);//paddyField.location;
 				paddyFieldId <- myself.id;
 			}
-			create Predator number: number_of_predator {
-				paddyField <- myself.paddyField;
-				location <- paddyField.location;
+			create Predator number: number_of_predator returns: listPredator {
+				cell <- myself.paddyField;
+				location <- any_location_in(cell.shape);
 				paddyFieldId <- myself.id;
 			}
 			//cell1 cell;
-			create Farmer {
+			create Farmer{
 				id <- myself.index;
 				cell <- myself.paddyField;
 				location <- cell.location;
 				myself.farmer <- self;
 				paddy <- myself;
 			}
+			
+			lstPest <- list<agent>(listPest);
+			lstParasitoid <- list<agent>(listParasitoid);
+			lstPredator <- list<agent>(listPredator);
+			//write("list parasitoid: " + lst + length(lst));
 			
 //			list para <- Parasitoid where (each.paddyField.index = self.paddyField.index);
 //			write(para);
@@ -124,9 +133,22 @@ global {
 	}
 	
 	reflex check_date_time {
-		cycle_count <- cycle_count + 1;
+		hour <- hour + (step / 3600); // second to hour
+		write("hours: " + hour);
+		if (hour mod 24 = 0) {
+			day <- int(hour/24);//day + 1;//int(hour / 24);
+			write("day: " + day);
+			if (day mod 8 = 0) { // weekly
+				cycle_count <- cycle_count + 1;
+				write("cycle count increase: " + cycle_count);
+				//is_farmer_decided <- false;
+				//do update_pests_were_eaten_by;
+				do renewVariable;
+			}
+		}
+		//cycle_count <- cycle_count + 1;
 		//is_farmer_decided <- false;
-		do renewVariable;
+		//do renewVariable;
 	}
 	
 	action renewVariable {
@@ -141,7 +163,7 @@ grid PaddyField width: 2 height: 2 {
 //		float cell_value min: 0.0 max: 3.0 <- 3.0;
 		bool is_free <- true;
 		Farmer farmer;
-		//RicePaddy riceField;
+		RicePaddy ricePaddy;
 //		RicePaddy ricePaddy update: RicePaddy {
 //			id <- 1;
 //		}
@@ -184,57 +206,18 @@ grid PaddyField width: 2 height: 2 {
 //		}
 }
 
-
-
-grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8 { // good to go with 30 x 30
-	rgb color <- #green;
-	float cell_value min: 0.0 max: 3.0 <- 3.0;
-	bool is_free <- true;
-	//RicePaddy riceField;
-//	geometry shape <- square(10);
-//	PaddyField paddycell;
-	
-	init {
-		//location <- one_of(PaddyField).location;
-//		shape.width <- 1;
-//		write("shape width 1: " + shape.width);
-//		paddycell <- one_of(PaddyField);
-//		location <- paddycell.location;
-	}
-	
-	
-	list get_insects_inside {
-		return agents_inside(self);//(Predator + Pest + Predator) inside self;
-		//return (Predator + Pest + Predator) inside(self);
-	}
-	
-	action change_color {
-		if (cell_value = 3.0) {
-			// Dark Green Background
-			color <- rgb(0, 112, 48);
-		} else if (cell_value = 2.0) {
-			// Light Green Background
-			color <- rgb(198, 239, 206);
-		} else if (cell_value = 1.0) {
-			// Bright Yellow Background
-			color <- rgb(255, 255, 0);
-		} else if (cell_value = 0.0) {
-			// Brown Background #583927, LEGO Brick
-			color <- rgb(88, 57, 39);
-		}
-	}
-	
-}
-
 	
 
 species RicePaddy {
 	int id;
 	PaddyField paddyField;
 	Farmer farmer;
+	list<Parasitoid> lstParasitoid;
+	list<Predator> lstPredator;
+	list<Pest> lstPest;
 	
 	string filePath <- "../results/paddyField/id_";
-	geometry shape <- square(10);
+	//geometry shape <- square(10);
 	// need to find of each cycle_count
 	//float pest_non_resistant <- 0.0;
 	float predation_rate <- 0.0;
@@ -269,7 +252,7 @@ species RicePaddy {
 	//grid rice_grid border: #yellow;
 	
 	init {
-		write("RicePaddy: " + id + filePath);
+		//write("RicePaddy: " + id + filePath);
 		//test
 //		PaddyField tmpCell <- one_of(PaddyField where(each.is_free = true));
 //		if (tmpCell != nil) {
@@ -293,11 +276,13 @@ species RicePaddy {
 		//write(cell1);
 	}
 	
-	reflex checkCycleCrop {
+	reflex checkCycleCrop when: every(per_cycle_count#cycles){
 		do renew_variable_each_cycle_count;
-		write("farmer: " + farmer.id);
-		write("paddyField: " + paddyField.index);
-		write("ricepaddy: " + id);
+		write("farmer: " + farmer.id + " : week" + cycle_count);
+		write("Pest total: " + pests_total);
+//		write("paddyField: " + paddyField.index);
+//		write("ricepaddy: " + id);
+//		write("lstParasitoid: " + self.lstParasitoid);
 	}
 	
 	action initialise_variable {
@@ -436,8 +421,8 @@ species RicePaddy {
 			int update_predator_amount <- round(predators[length(predators) - 1]) - round(predators[length(predators) - 2]);
 			if (update_predator_amount > 0) {
 				create Predator number: update_predator_amount {
-					paddyField <- myself.paddyField;
-					location <- paddyField.location;
+					cell <- myself.paddyField;
+					location <- any_location_in(cell.shape).location;//paddyField.location;
 					//paddyFieldId <- paddyField.index;
 				}
 			} else if (update_predator_amount < 0) {
@@ -445,7 +430,7 @@ species RicePaddy {
 //				
 //				write("select predator: " +  one_of(Predator where (each.paddyField.index = self.id)).paddyField.index + " -> " + self.id);
 //				write("length of pred: " + length(Predator));
-				list<Predator> selectedPredator <- abs(update_predator_amount) among (Predator where(each.paddyField.index = self.id));
+				list<Predator> selectedPredator <- abs(update_predator_amount) among (Predator where(each.cell.index = self.id));
 				loop p over: selectedPredator {
 					ask p {
 						do die;
@@ -510,6 +495,7 @@ species RicePaddy {
 		//add number_of_pest to: pest_population; // store in list
 		add num_pest to: pests_total;
 		//create Pest number: number_of_pest;
+		write("cycle count: " + cycle_count + " -> " + pests_total);
 		int pest_amount <- round(pests_total[cycle_count]);
 		if (cycle_count > 0) {
 			pest_amount <- round(pests_total[length(pests_total) - 1]) - round(pests_total[length(pests_total) - 2]);
@@ -517,13 +503,13 @@ species RicePaddy {
 		
 		if (pest_amount > 0) {
 			create Pest number: pest_amount {
-				paddyField <- myself.paddyField;
-				location <- paddyField.location;
+				cell <- myself.paddyField;
+				location <- any_location_in(cell.shape).location;//paddyField.location;
 				//paddyFieldId <- paddyField.index;
 			}
 		} else if (pest_amount < 0) {
 			//list<Pest> pest <- Pest where(each.paddyField.id = id);
-			list<Pest> selectedPest <- abs(pest_amount) among (Pest where(each.paddyField.index = self.paddyField.index));
+			list<Pest> selectedPest <- abs(pest_amount) among (Pest where(each.cell.index = self.paddyField.index));
 			loop p over: selectedPest {
 				ask p {
 					do die;
@@ -566,9 +552,12 @@ species RicePaddy {
 			add tmp_parasitoid to: parasitoids;
 			int parasitoid_amount <- round(parasitoids[length(parasitoids) - 1]) - round(parasitoids[length(parasitoids) - 2]);
 			if (parasitoid_amount > 0) {
-				create Parasitoid number: parasitoid_amount;
+				create Parasitoid number: parasitoid_amount {
+					cell <- myself.paddyField;
+					location <- any_location_in(cell.shape);
+				}
 			} else if (parasitoid_amount < 0) {
-				list<Parasitoid> selectedParasitoid <- abs(parasitoid_amount) among Parasitoid where(each.paddyField.index = self.paddyField.index);
+				list<Parasitoid> selectedParasitoid <- abs(parasitoid_amount) among Parasitoid where(each.cell.index = self.paddyField.index);
 				loop p over: selectedParasitoid {
 					ask p {
 						do die;
@@ -674,7 +663,7 @@ species RicePaddy {
 	}
 	
 	
-	action check {
+	action check{
 		/*write("treatments: " + treatments);
 		// predator
 		write("predator each cycle_count: " + predators);
@@ -692,11 +681,11 @@ species RicePaddy {
 		write("total potential pest eaten: " + total_potential_pests_eaten);
 		write("totoal pest eaten: " + total_pest_eaten);
 		*/
-		write("predation rates: " + predation_rates);
-		write("field cases: " + field_cases);
-		write("potential yield: " + potential_yields);
-		write("real yield in tons: " + real_yield_in_tons);
-		write("max dynamic_yield: " + max_dynamic_yields);
+//		write("predation rates: " + predation_rates);
+//		write("field cases: " + field_cases);
+//		write("potential yield: " + potential_yields);
+//		write("real yield in tons: " + real_yield_in_tons);
+//		write("max dynamic_yield: " + max_dynamic_yields);
 		
 //		write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids[cycle_count]);
 //		write("potential pest eaten by predators: " + potential_pests_eaten_by_predators[cycle_count]);
@@ -768,7 +757,7 @@ species RicePaddy {
 	}
 	
 	aspect default {
-		draw square(1) color: #red;
+		draw square(1) color: #transparent;
 	}
 }
 
@@ -778,34 +767,28 @@ species RicePaddy {
 //	//list<int> treatments <- [0,0,0,0,0,0,0,0,0,0,0,0,0];
 //}
 
-species Insect {
+species Insect skills: [moving] {
 	//Current cell of the agent
-	PaddyField paddyField;
+	PaddyField cell;
 	int paddyFieldId; // no need this anymore
 		//rice_grid current_cell;
 	//Evacuation cell of the agent
 	//rice_grid target_cell;
 	//List of the cells already passed by the agents and memorised
 	//list<rice_grid> memory;
-	float speed <- 1.6 #km/#day;
+	float speed <- 1.0;//1.6 #km/#day;
 	geometry shape <- square(2);
+	point goal;
+	bool is_chased <- false;
 	
-	init {
-		// move to one of a grid location
-//		rice_grid tmpCell <- one_of(rice_grid where(each.is_free = true));
-//		if (tmpCell != nil) {
-//			current_cell <- tmpCell;
-//		} else {
-//			current_cell <- one_of(rice_grid);
-//		}
-//		location <- current_cell.location;
-//		current_cell.is_free <- false;
+	reflex move { // change to move
+		if (goal != nil) {
+			do wander speed: speed;
+			do goto target: goal speed: speed;
+		} else {
+			do wander speed: speed;
+		}
 	}
-	
-	/*reflex move {
-		current_cell <- one_of(current_cell.neighbors);
-		location <- current_cell.location;
-	}*/
 	
 	aspect default {
 		draw circle(1) color: #red;
@@ -813,20 +796,51 @@ species Insect {
 }
 
 species Pest parent:Insect {
-	//float reproduction_rate <- 1.33;
+	float speed <- 0.2;
+	rgb color <- #red;
+	geometry shape <- circle(3);
+	
+	reflex fleeing {
+		if (length((cell.ricePaddy.lstPredator where (each != nil and !dead(each) and each distance_to self < perceipt_radius))) > 0) {
+			speed <- 1.0;
+			is_chased <- true;
+			color <- # lime;
+			if (goal = nil) {
+				agent a <- any(((cell.ricePaddy.lstPest where (each != nil and !dead(each) and !Insect(each).is_chased))));
+				if (a != nil and !dead(a)) {
+					if(flip(0.5)) {
+						goal <- a.location;
+					} else {
+						goal <- any_location_in(cell.shape);
+					}
+				} else {
+					goal <- any_location_in(cell.shape);
+				}
+			}
+		}
+		
+		if (goal != nil and self.location distance_to goal < 0.5)
+		{
+			goal <- nil;
+		}
 
-//	reflex move {
-//		current_cell <- one_of(current_cell.neighbors);
-//		location <- current_cell.location;
-//	}
+		if (length((cell.ricePaddy.lstPredator where (each != nil and !dead(each))) where (each distance_to self <= perceipt_radius)) = 0)
+		{
+			is_chased <- false;
+			color <- # red;
+			speed <- 0.2;
+		}
+	}
 	
 	aspect default {
-		draw square(10) color: #red;
+		draw shape color: color;
 	}
 }
 
 species Parasitoid parent: Insect {
 	int pest_eaten <- 0;
+	geometry shape <- triangle(4);
+	rgb color <- #black;
 	
 	/*reflex move {
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
@@ -867,13 +881,17 @@ species Parasitoid parent: Insect {
 	}*/
 	
 	aspect default {
-		draw square(1) color: #black;
+		//draw square(1) color: #black;
+		draw circle(perceipt_radius) color: #pink wireframe: true;
+		draw shape color: color rotate: 90 + heading;
 	}
 	
 }
 
 species Predator parent: Insect {
-	int pest_eaten <- 0;
+	//int pest_eaten <- 0;
+	geometry shape <- triangle(4);
+	rgb color <- #violet;
 
 	/*reflex move {
 		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
@@ -906,8 +924,48 @@ species Predator parent: Insect {
 		}
 	}*/
 	
-	aspect default {
-		draw square(1) color: #violet;
+	reflex hunting
+	{
+		write("list pest: " + cell.ricePaddy.lstPest);
+		if (goal = nil)
+		{
+			let tmp <- (cell.ricePaddy.lstPest where (!dead(each) and each.shape distance_to self.shape < perceipt_radius));
+			if (length(tmp) > 0)
+			{
+				agent a <- first(tmp sort (each.shape distance_to self.shape));
+				if (a = nil)
+				{
+					a <- any((cell.ricePaddy.lstPest where (!dead(each))));
+				}
+
+				if (a != nil)
+				{
+					speed <- 2.0;
+					goal <- a.location;
+				}
+
+			}
+
+		} else if ((self.location distance_to goal < 0.5))
+		{
+			ask cell.ricePaddy.lstPest where (!dead(each) and each.location distance_to goal < 0.5)
+			{
+				do die;
+			}
+
+			goal <- nil;
+			speed <- 1.0;
+		}
+
+	}
+	
+//	aspect default {
+//		draw square(1) color: #violet;
+//	}
+	aspect default
+	{
+		draw circle(perceipt_radius) color: # pink wireframe: true;
+		draw shape color: color rotate: 90 + heading;
 	}
 }
 
@@ -915,26 +973,40 @@ species Farmer {
 	int id;
 	PaddyField cell;
 	RicePaddy paddy;
-	
+	string decision <- NONE;
 	// Farmer in the rice paddy
 	
 	init {
 		write("farmer species init");
 	}
 
-	reflex farmer_decision when: cycle_count > 0 and cycle_count < 13 {
+	reflex farmer_decision when: (cycle_count > 0 and cycle_count < 13) and every(per_cycle_count#cycles){
 			write("\nWeeks: " + cycle_count);
 			ask paddy {do sequential_var_calc;}
-			do spray_all_the_time;
+			switch(decision) {
+				match NONE{
+					do no_spray;
+					break;
+				}
+				match ALL_WEEK {
+					do spray_all_the_time;
+					break;
+				}
+				default {
+					do no_spray;
+					break;
+				} 
+			}
+			
 			ask paddy {do check;}
 			//ask world {do get_total_prev_treatment();}
-//			is_farmer_decided <- true;
+			is_farmer_decided <- true;
 			//all_farmer_decided <- all_farmer_decided + 1;
 	}
 	
-	reflex test {
-		write("test decision");
-	}
+//	reflex test  when:every(per_cycle_count#cycles)  {
+//		write("test decision");
+//	}
 	
 	action spray_all_the_time {
 		if (cycle_count = 0 or cycle_count = 12) {
@@ -944,12 +1016,16 @@ species Farmer {
 		}
 		
 	}
+	
+	action no_spray {
+		add 0 to: paddy.treatments;
+	}
 		
 }
 
 species RiceMonitor {
 	reflex check {
-		write("all farmer decided: " + all_farmer_decided);
+		//write("all farmer decided: " + all_farmer_decided);
 	}
 	
 	reflex stop_experiment when: cycle_count = 12 { 
