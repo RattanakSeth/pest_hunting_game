@@ -1348,6 +1348,12 @@ experiment "Batch Experiment" parent: Base {
 			spray <- ONLY_3RD_WEEK;
 			is_batch_experiment <- true; // only decide a batch experiment
 		}
+		
+		create pestHuntingsecondmodel_model {
+			is_interacted <- false;
+			spray <- NONE; // no treatment was applied
+			is_batch_experiment <- true; // only decide a batch experiment
+		}
 	}
 	
 	output {

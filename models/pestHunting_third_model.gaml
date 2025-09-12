@@ -37,13 +37,13 @@ global {
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
 
-	float step <-  1#week;//1#week; from 2 days up, it's accurate (insect will only move inside a grid
+	float step <-  2#day;//1#week; from 2 days up, it's accurate (insect will only move inside a grid)
 	geometry shape <- square(2000);
 	float second_count <- 0.0;
 	int day <- 0;
 	int cycle_count <- 0; // cycle count
 	//int cycle <- 0;
-	float per_cycle_count <- 1#week; //- 1#day; // occur when 1#week
+	float per_cycle_count <- 1#week - 1#day; // occur when 1#week
 	
 	// initialise variable
 	// parasitoid
@@ -86,7 +86,7 @@ global {
 	int num_paddy_field <- 0;
 	
 	// new variable
-	float perceipt_radius <- 20.0;
+	float perception_radius <- 20.0; //#m;
 	
 	init {
 		//write sample(TREATMENT_ONCE_A_CYLE last_index_of 'is');
@@ -822,7 +822,7 @@ species Pest parent:Insect {
 	geometry shape <- circle(3);
 	
 	reflex fleeing {
-		if (length((cell.ricePaddy.lstPredator where (each != nil and !dead(each) and each distance_to self < perceipt_radius))) > 0) {
+		if (length((cell.ricePaddy.lstPredator where (each != nil and !dead(each) and each distance_to self < perception_radius))) > 0 or length((cell.ricePaddy.lstParasitoid where (each != nil and !dead(each) and each distance_to self < perception_radius))) > 0) {
 			speed <- 2.0 #km/#day;
 			is_chased <- true;
 			color <- # lime;
@@ -845,7 +845,7 @@ species Pest parent:Insect {
 			goal <- nil;
 		}
 
-		if (length((cell.ricePaddy.lstPredator where (each != nil and !dead(each))) where (each distance_to self <= perceipt_radius)) = 0)
+		if (length((cell.ricePaddy.lstPredator where (each != nil and !dead(each))) where (each distance_to self <= perception_radius)) = 0)
 		{
 			is_chased <- false;
 			color <- #red;
@@ -868,7 +868,7 @@ species Parasitoid parent: Insect {
 		//write("pest eaten by parasitoid: " + cell.ricePaddy.num_pest_eaten_by_parasitoid + "org: "  + cell.ricePaddy.potential_pests_eaten_by_parasitoids[length(cell.ricePaddy.potential_pests_eaten_by_parasitoids)-1]);
 		if (goal = nil)
 		{
-			let tmp <- (cell.ricePaddy.lstPest where (!dead(each) and each.shape distance_to self.shape < perceipt_radius));
+			let tmp <- (cell.ricePaddy.lstPest where (!dead(each) and each.shape distance_to self.shape < perception_radius));
 			if (length(tmp) > 0)
 			{
 				agent a <- first(tmp sort (each.shape distance_to self.shape));
@@ -879,7 +879,7 @@ species Parasitoid parent: Insect {
 
 				if (a != nil)
 				{
-					speed <- 1.6 #km/#day;
+					speed <- 2.5 #km/#day;
 					goal <- a.location;
 				}
 
@@ -911,7 +911,7 @@ species Parasitoid parent: Insect {
 	
 	aspect default {
 		//draw square(1) color: #black;
-		draw circle(perceipt_radius) color: #black wireframe: true;
+		draw circle(perception_radius) color: #black wireframe: true;
 		draw shape color: color rotate: 90 + heading;
 	}
 	
@@ -921,44 +921,13 @@ species Predator parent: Insect {
 	//int pest_eaten <- 0;
 	geometry shape <- triangle(3);
 	rgb color <- #violet;
-
-	/*reflex move {
-		rice_grid tmp_cell <- shuffle(current_cell.neighbors) first_with (!(empty(Pest inside (each))));
-		//write("current cell: ", tmp_cell);
-		if (tmp_cell != nil) {
-			//write("not nil, so have pest neighbour. " +  tmp_cell);
-			current_cell <- tmp_cell;
-			location <- current_cell.location;
-			current_cell.is_free <- false;
-		} else {
-			//write("nil");
-			// check other location
-			current_cell <- one_of(current_cell.neighbors);
-			location <- current_cell.location;
-			current_cell.is_free <- false;
-		}
-	}*/
-	
-	/*reflex eat when: num_pest_eaten_by_predator < potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1] {
-		list<Insect> insectList <- agents_overlapping(self) of_species Pest;
-		loop p over: insectList {
-			if (num_pest_eaten_by_predator = potential_pests_eaten_by_predators[length(potential_pests_eaten_by_predators)-1]) {break;}
-			pest_eaten <- pest_eaten + 1;
-			num_pest_eaten_by_predator <- num_pest_eaten_by_predator + 1;
-			ask p {
-				number_of_pest <- number_of_pest - 1;
-				current_cell.is_free <- true;
-				do die;
-			}
-		}
-	}*/
 	
 	reflex hunting when: length(cell.ricePaddy.lstPest) > cell.ricePaddy.pests_total[length(cell.ricePaddy.pests_total)-1]//cell.ricePaddy.num_pest_eaten_by_predator < cell.ricePaddy.potential_pests_eaten_by_predators[length(cell.ricePaddy.potential_pests_eaten_by_predators)-1]
 	{
 		//write("list pest: " + cell.ricePaddy.lstPest);
 		if (goal = nil)
 		{
-			let tmp <- (cell.ricePaddy.lstPest where (!dead(each) and each.shape distance_to self.shape < perceipt_radius));
+			let tmp <- (cell.ricePaddy.lstPest where (!dead(each) and each.shape distance_to self.shape < perception_radius));
 			if (length(tmp) > 0)
 			{
 				agent a <- first(tmp sort (each.shape distance_to self.shape));
@@ -969,7 +938,7 @@ species Predator parent: Insect {
 
 				if (a != nil)
 				{
-					speed <- 2.0 #km/#day;
+					speed <- 2.5 #km/#day;
 					goal <- a.location;
 				}
 
@@ -993,7 +962,6 @@ species Predator parent: Insect {
 					do die;
 				}
 			}
-			
 
 			goal <- nil;
 			speed <- 1.6#km/#day;
@@ -1001,12 +969,9 @@ species Predator parent: Insect {
 
 	}
 	
-//	aspect default {
-//		draw square(1) color: #violet;
-//	}
 	aspect default
 	{
-		draw circle(perceipt_radius) color: #violet wireframe: true;
+		draw circle(perception_radius) color: #violet wireframe: true;
 		draw shape color: color rotate: 90 + heading;
 	}
 }
@@ -1116,5 +1081,20 @@ experiment Ex parent: Base{
 //			species multiGrid;
 //			species rice_grid;
 		}
+		
+		//TODO: check next
+//		display plots type: 2d refresh:every(per_cycle_count#cycles){
+//				/*chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
+//				    data "Pest" value: length(Pest) color: PEST_COLOR;
+//				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
+//				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
+//				    //data "Treatment" value: (treatments[cycle_count] = 1 ? treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
+//				}*/
+//				
+//				chart "Crop Yield" size: {1,0.5} position: {0,0.5} type: series {
+//				    data "Real Yield (tons)" value: RicePaddy[0].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+//				    data "Max yield (tons)" value: RicePaddy[0].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+//				}
+//		}
 	}
 }

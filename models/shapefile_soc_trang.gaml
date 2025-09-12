@@ -23,6 +23,17 @@ global {
 		create Parcel from: parcel_file with: [id::read('STT'), terrain::read('AREA'), landuse_type::read('LAND_USE'), salee::read('SALINE'), land_unit::read('DVDD')] {
 			do setColor;
 		}
+		
+		int i <-0;
+		create species: Proprietaire number: length(Parcel);
+		loop  i from: 0 to: length(Parcel) - 1 {
+			ask Proprietaire at i {
+				monParcel <- Parcel at i;
+			}
+		}
+
+		//do initializeParcel;
+		//do initializeLUT;
 	}
 }
 
@@ -103,13 +114,113 @@ species Parcel {
 
 		} //action setColor
 
-	}
+}
 
-experiment RunMe {
+species LUT {
+	string land_unit_id <- "";
+	string landuse_type <- "";
+	int land_suitability <- 4;  // 4 is not suitable; 1 is the most suitable
+	float profit_rate <- 0;
+	float b_c_rate <- 0;
+}
+
+species Proprietaire {
+		Parcel monParcel <- nil;
+		float revenue <- 0.0;
+		float argent_min_lavie <- 3000; // +rnd (20);
+ 		reflex changement {
+			do change_landuse_type_base_on_benifit_cost;
+			
+			do calculate_area;
+		}
+		action calculate_area {
+			ask monParcel{
+				if self.landuse_type ="shrp"{
+					//area_crevette_ha <-  area_crevette_ha+  self.terrain ;	
+				}
+				if self.landuse_type ="rice"{
+					//area_riz_ha <- area_riz_ha + self.terrain ;	
+				}
+				if self.landuse_type ="veg"{
+					//area_vegatable_ha <- area_vegatable_ha + self.terrain ;	
+				}
+				if self.landuse_type ="coco_cacao"{
+					//area_cocotier_ha <- area_cocotier_ha + self.terrain ;	
+				}
+			
+			}
+		}
+		action change_landuse_type_base_on_benifit_cost { //doc DVDD cuar thuadat0
+ // 	Tra ddvd cua thua xem thich nghi cao o kieu su dung nao
+ //		CHuyen sang kieu su dung do
+
+			// If there are multiple types of adaptive supplies, select one of those adaptive supplies.
+			ask monParcel{
+				//self.landuse_type<-"coco_cacao";
+				//list aLUT <- LUT where (each.land_unit_id = ""+ self.land_unit); // land_unit la cua thua dat
+				//write aLUT as list;
+				int Thichghitot <- 9999;
+				int tmp_b_c_rate<-0;
+				int tmp_profit_rate<-0;
+				
+				//write("aLUT length: " + aLUT + length(aLUT));
+//				ask aLUT {
+//					write("land_suitability: " + land_suitability);
+//				}
+////				ask aLUT{
+//					// tim cap thich nghi cao nhat
+//					if (land_suitability <= Thichghitot )and (land_suitability<=3) and (myself.landuse_type != self.landuse_type) {
+//						//if (profit_rate> tmp_profit_rate){
+//							if (b_c_rate > tmp_b_c_rate ){
+//							//tmp_profit_rate <- profit_rate;
+//							tmp_b_c_rate<- b_c_rate;
+//							Thichghitot <- land_suitability;
+//							myself.landuse_type<-""+ self.landuse_type;  // trong vong lap ask, self; myself doi tuong ngoai vongf lap ask
+//						}
+//						 
+//					}
+//				}
+//				loop lut over: aLUT {
+//					write(lut);
+//				}
+				
+			}	
+			ask target: monParcel {
+				do setColor;
+			}
+
+	
+		}
+
+	
+ // calculer les revenu du proprietaire 
+ action calculRevenue {
+			if monParcel.landuse_type = "rice" {
+				//set revenue <- monParcel.produit * prix_riz;
+			} else {
+				if monParcel.landuse_type = "veg" {
+					//set revenue <- monParcel.produit * prix_vegatable;
+				}
+			}
+
+		} //calculRevenue 
+
+	} 
+
+experiment RunMe type: gui {
 	output {
 		display RiceSystem {
 			species Parcel;
 			species River;
+		}
+		
+		display graphique {
+			chart name: 'Stock global' type: series background: rgb('white') {
+				//data 'crevette' value: produition_total_crevette color: rgb('red');
+				data 'rice' value: total_rice_production color: rgb('yellow');
+				//data 'vegatable' value: produition_total_vegatable color: rgb('green');
+			}
+
 		}
 	}
 }
