@@ -37,13 +37,13 @@ global {
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
 
-	float step <-  2#day;//1#week; from 2 days up, it's accurate (insect will only move inside a grid)
+	float step <-  1 #day;//1#week; from 2 days up, it's accurate (insect will only move inside a grid)
 	geometry shape <- square(2000);
-	float second_count <- 0.0;
+	float step_count <- 0.0;
 	int day <- 0;
 	int cycle_count <- 0; // cycle count
 	//int cycle <- 0;
-	float per_cycle_count <- 1#week - 1#day; // occur when 1#week
+	float per_cycle_count <- 1#week; // occur when 1#week
 	
 	// initialise variable
 	// parasitoid
@@ -179,14 +179,18 @@ global {
 			
 		}*/
 
-		second_count <- second_count + step;
-		write(second_count);
-		cycle_count <- int(second_count/1#week);
-		write("" + second_count/1#week + " to int" + "  " + cycle_count);
+		step_count <- step_count + step;
+		write(step_count);
+		cycle_count <- int(step_count/1#week);
+		write("" + step_count/1#week + " to int" + "  " + cycle_count);
 	}
 	
-	action step_as_weekly {
-		cycle_count <- cycle_count + 1;
+//	action step_as_weekly {
+//		cycle_count <- cycle_count + 1;
+//	}
+	
+	reflex refreshEnter when: every(1#week) {
+		write("refresh of every week enter: " + cycle_count);
 	}
 	
 //	action renewVariable {
@@ -320,7 +324,7 @@ species RicePaddy {
 			bool delete_file_ok <- delete_file(calc_file);
             write "Deleted file: " + delete_file_ok;
 		}
-
+		write("length of pest total: " + length(pests_total));
 		// stick to the excel
 		loop i from: 0 to: 12 {
 			int cycles <- i;
@@ -769,7 +773,7 @@ species RicePaddy {
 	}
 	
 	
-	reflex record_data when: cycle_count = 12 and !self.is_stored{
+	reflex record_data when: cycle_count = 13 and !self.is_stored{
 		write("store data: " + id);
 		do store_data_to_csv;
 		self.is_stored <- true;
@@ -1005,10 +1009,10 @@ species Farmer {
 					do spray_once_within_rice_cycle(once_per_cycle.keys[0]);
 					break;
 				}
-				default {
-					do no_spray;
-					break;
-				} 
+//				default {
+//					do no_spray;
+//					break;
+//				} 
 			}
 			
 			ask paddy {do check;}
@@ -1035,9 +1039,7 @@ species Farmer {
 	}
 	
 	action spray_once_within_rice_cycle(int week_num) {
-		if (cycle_count = 0 or cycle_count = 12) {
-			add 0 to: paddy.treatments;
-		} else if (cycle_count = week_num) {
+		if (cycle_count = week_num) {
 			add 1 to: paddy.treatments;
 		} else {
 			add 0 to: paddy.treatments;
@@ -1051,7 +1053,7 @@ species RiceMonitor {
 		//write("all farmer decided: " + all_farmer_decided);
 	}
 	
-	reflex stop_experiment when: cycle_count = 12 { 
+	reflex stop_experiment when: cycle_count = 13 { 
 		write("Rice harvested, stop experiment.");
 		ask world {
 			do pause;
@@ -1077,24 +1079,39 @@ experiment Ex parent: Base{
 			species Pest;
 			species Predator;
 			species Parasitoid;
-			species Farmer;
+			//species Farmer;
 //			species multiGrid;
 //			species rice_grid;
 		}
 		
 		//TODO: check next
-//		display plots type: 2d refresh:every(per_cycle_count#cycles){
-//				/*chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
-//				    data "Pest" value: length(Pest) color: PEST_COLOR;
-//				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
-//				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
-//				    //data "Treatment" value: (treatments[cycle_count] = 1 ? treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
-//				}*/
-//				
-//				chart "Crop Yield" size: {1,0.5} position: {0,0.5} type: series {
-//				    data "Real Yield (tons)" value: RicePaddy[0].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
-//				    data "Max yield (tons)" value: RicePaddy[0].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
-//				}
-//		}
+		display plots type: 2d refresh:every(per_cycle_count#cycles){
+				/*chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
+				    data "Pest" value: length(Pest) color: PEST_COLOR;
+				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
+				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
+				    //data "Treatment" value: (treatments[cycle_count] = 1 ? treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
+				}*/
+				
+				chart "Crop Yield Rice Paddy 0: ID" + RicePaddy[0].id + (RicePaddy[0].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[0].farmer.decision + " " + RicePaddy[0].farmer.once_per_cycle.keys:  RicePaddy[0].farmer.decision)  size: {0.5,0.5} position: {0,0} type: series {
+				    data "Real Yield (tons)" value: RicePaddy[0].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+				    data "Max yield (tons)" value: RicePaddy[0].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+				}
+				
+				chart "Crop Yield Rice Paddy 1: ID" + RicePaddy[1].id + (RicePaddy[1].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[1].farmer.decision + " " + RicePaddy[1].farmer.once_per_cycle.keys:  RicePaddy[1].farmer.decision)  size: {0.5,0.5} position: {0.5,0} type: series {
+				    data "Real Yield (tons)" value: RicePaddy[1].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+				    data "Max yield (tons)" value: RicePaddy[1].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+				}
+				
+				chart "Crop Yield Rice Paddy 2: ID" + RicePaddy[2].id + (RicePaddy[1].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[1].farmer.decision + " " + RicePaddy[2].farmer.once_per_cycle.keys:  RicePaddy[2].farmer.decision)  size: {0.5,0.5} position: {0,0.5} type: series {
+				    data "Real Yield (tons)" value: RicePaddy[2].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+				    data "Max yield (tons)" value: RicePaddy[2].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+				}
+				
+				chart "Crop Yield Rice Paddy 3: ID" + RicePaddy[3].id + (RicePaddy[3].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[1].farmer.decision + " " + RicePaddy[3].farmer.once_per_cycle.keys:  RicePaddy[3].farmer.decision)  size: {0.5,0.5} position: {0.5,0.5} type: series {
+				    data "Real Yield (tons)" value: RicePaddy[3].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+				    data "Max yield (tons)" value: RicePaddy[3].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+				}
+		}
 	}
 }
