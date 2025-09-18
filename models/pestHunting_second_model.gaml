@@ -93,8 +93,8 @@ global {
 	// Input params
 	int rice_field_width <- 10 min: 10;
 	int rice_field_height <- 10 min: 10;
-	int number_of_parasitoid <- 25 min: 25;
-	int number_of_predator <- 7 min: 7;
+	int number_of_parasitoid <- 25 min: 0;
+	int number_of_predator <- 7 min: 0;
 	
 	// In between treatment store
 	list treatment_areas <- [];
@@ -122,11 +122,12 @@ global {
 		create Predator number: number_of_predator {
 		}
 		
-		if (!is_batch_experiment) {
-			create Farmer;
-		} else {
-			create Farmer;
-		}
+		create Farmer;
+//		if (!is_batch_experiment) {
+//			create Farmer;
+//		} else {
+//			create Farmer;
+//		}
 		
 		// initial variable
 		do initialise_variable;
@@ -479,24 +480,24 @@ global {
 		float tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
 		add tmp_remove_rice_yield to: remove_sticky_notes;
 		list<rice_grid> rice_pest <- shuffle(rice_grid) where(each.cell_value > 0); // abs(round(tmp_remove_rice_yield)) among 
-		write("num remove sticky note: " + abs(round(tmp_remove_rice_yield)));
-		write("rice pest: " + length(rice_pest));
+		//write("num remove sticky note: " + abs(round(tmp_remove_rice_yield)));
+		//write("rice pest: " + length(rice_pest));
 		
 		if (abs(round(tmp_remove_rice_yield)) != 0) {
 			if (length(rice_pest) > 0) {
 				int tmp_remove <- abs(round(tmp_remove_rice_yield));
-				write("Start remove grid layer");
+				//write("Start remove grid layer");
 				int removedSticky <- 0;
 				loop rp over: rice_pest {
 					if (tmp_remove = 0) {break;}
 					int cellValue <- int(rp.cell_value);
 					tmp_remove <- tmp_remove - cellValue;
-					write("remaining tmp remove: " + tmp_remove);
+					//write("remaining tmp remove: " + tmp_remove);
 					if (tmp_remove < 0) {
 						// testing var
 						removedSticky <- removedSticky + (cellValue + tmp_remove);
-						write("less than zero: " + tmp_remove);
-						write("cellvalue - tmp_remove: " + (cellValue + tmp_remove));
+						//write("less than zero: " + tmp_remove);
+						//write("cellvalue - tmp_remove: " + (cellValue + tmp_remove));
 						ask rp {
 							cell_value <- float(abs(tmp_remove));
 							do change_color;
@@ -505,14 +506,14 @@ global {
 					} else {
 						// testing var
 						 removedSticky <- removedSticky + cellValue;
-						 write("amount to remove: " + cellValue);
+						 //write("amount to remove: " + cellValue);
 						ask rp {
 							cell_value <- 0.0;
 							do change_color;
 						}
 					}
 				}
-				write("removed sticky: " + removedSticky);
+				//write("removed sticky: " + removedSticky);
 			}
 		}
 	}
@@ -575,10 +576,10 @@ global {
 		write("real yield in tons: " + real_yield_in_tons);
 		write("max dynamic_yield: " + max_dynamic_yields);
 		*/
-		write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids[cycle_count]);
-		write("potential pest eaten by predators: " + potential_pests_eaten_by_predators[cycle_count]);
-		write("num_pest_eaten_by_predator: " + num_pest_eaten_by_predator);
-		write("num_pest_eaten_by_parasitoid: " + num_pest_eaten_by_parasitoid);
+//		write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids[cycle_count]);
+//		write("potential pest eaten by predators: " + potential_pests_eaten_by_predators[cycle_count]);
+//		write("num_pest_eaten_by_predator: " + num_pest_eaten_by_predator);
+//		write("num_pest_eaten_by_parasitoid: " + num_pest_eaten_by_parasitoid);
 	}
 	
 	action calc_end_result_and_store {
@@ -988,7 +989,7 @@ species Farmer {
 		loop rc over: rnd_grids {
 			//write("random grid: " + rnd_grids[i]);
 			//rice_grid rg <- rice_grid grid_at rnd_grids[i];
-			do create_treatment_area(rc.location);
+			//do create_treatment_area(rc.location);
 			list<Insect> insect_on_grid <- rc.get_insects_inside();
 			insect_on_grid <- insect_on_grid where (each!=nil); // remove nil
 			insect_on_grid >>- 0; // remove nill from list
@@ -1001,18 +1002,15 @@ species Farmer {
 		}
 	}
 	
-	action create_treatment_area(point l){
+	/*action create_treatment_area(point l){
 		create TreatmentArea {
 			color <-  #transparent;//tet_colors[i];
 			location <- l;//{15,10}
 			shape <- world.select_shape(location);
 			//frequency <- world.freq(level);
 			is_active <- true;
-//			ask tetrimino - self {
-//				do die;
-//			}
 		}
-	}
+	}*/
 	
 	list<rice_grid> get_fields_for_treatment{
 		/* 
@@ -1049,7 +1047,7 @@ species Farmer {
 		return rice_cell;
 	}
 	
-	reflex stop_experiment when: cycle_count = 12 { 
+	reflex stop_experiment when: cycle_count = 12 and !is_batch_experiment { 
 		write("Rice harvested, stop experiment.");
 		ask world {
 			do store_data_to_csv;
@@ -1391,6 +1389,99 @@ experiment "Batch Experiment" parent: Base {
 			// TODO: farmer owned their own field
 			// Now experiment base on all field as a hactar grid. each farmer has a hactar
 //			species ExperimentFarmerNoTreatment;
+		}
+	}
+}
+
+experiment "Batch None" type: batch keep_seed: true repeat: 1 until: (cycle_count = 13){
+	parameter "Number of parasitoid" category: "Insect" var: number_of_parasitoid min: 0 max: 40 step: 1; // 25
+	parameter "Number of predator" category: "Insect" var: number_of_predator min: 0 max: 30 step: 1; // 7
+	
+	init {
+		is_interacted <- false;
+		is_batch_experiment <- true;
+		spray <- NONE;
+		write("is_interacted: " + is_interacted);
+	}
+	
+	reflex check {
+		write("working on .. : " + time); 
+	}
+	
+	reflex end_of_runs
+	{
+		// each simulation of the run is an agent; it is possible to access to the list of these agents by using the variable "simulations" of the experiment. 
+		// Another way of accessing to the simulations consists in using the name of model + _model: here "batch_example_model"
+		//in this example, we ask all the simulation agents of the run to save (at the end of the simulation) the people population in a shapefile with their is_infected and is_immune attributes 
+		ask simulations
+		{	
+			float finalYield <- last (real_yield_in_tons);
+			// initialise value and the end result that we get
+			save [number_of_parasitoid, number_of_predator, finalYield] to: "../results/batch/none_natural_enemies.csv" format:"csv" rewrite: false;
+			write("number of parasitoid: " + number_of_parasitoid);
+			write("number of predator: " + number_of_predator);
+			write("real_yield_in_tons: " + real_yield_in_tons);
+			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
+		}
+	}
+}
+
+experiment "Batch every week" type: batch keep_seed: true repeat: 1 until: (cycle_count = 13){
+	parameter "Number of parasitoid" category: "Insect" var: number_of_parasitoid min: 0 max: 40 step: 1; // 25
+	parameter "Number of predator" category: "Insect" var: number_of_predator min: 0 max: 30 step: 1; // 7
+	
+	init {
+		is_interacted <- false;
+		is_batch_experiment <- true;
+		spray <- ALL_WEEK;
+		write("is_interacted: " + is_interacted);
+	}
+	
+	reflex end_of_runs
+	{
+		// each simulation of the run is an agent; it is possible to access to the list of these agents by using the variable "simulations" of the experiment. 
+		// Another way of accessing to the simulations consists in using the name of model + _model: here "batch_example_model"
+		//in this example, we ask all the simulation agents of the run to save (at the end of the simulation) the people population in a shapefile with their is_infected and is_immune attributes 
+		ask simulations
+		{	
+			float finalYield <- last (real_yield_in_tons);
+			// initialise value and the end result that we get
+			save [number_of_parasitoid, number_of_predator, finalYield] to: "../results/batch/every_week_natural_enemies.csv" format:"csv" rewrite: false;
+			write("number of parasitoid: " + number_of_parasitoid);
+			write("number of predator: " + number_of_predator);
+			write("real_yield_in_tons: " + real_yield_in_tons);
+			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
+		}
+	}
+}
+
+// TODO: next add spray decision their
+experiment "Batch once per cycle" type: batch keep_seed: true repeat: 1 until: (cycle_count = 13){
+	parameter "Number of parasitoid" category: "Insect" var: number_of_parasitoid min: 0 max: 40 step: 1; // 25
+	parameter "Number of predator" category: "Insect" var: number_of_predator min: 0 max: 30 step: 1; // 7
+	//parameter "Spray" category: "Pesticide" var: spray;
+	
+	init {
+		is_interacted <- false;
+		is_batch_experiment <- true;
+		//spray <- ALL_WEEK;
+		write("is_interacted: " + is_interacted);
+	}
+	
+	reflex end_of_runs
+	{
+		// each simulation of the run is an agent; it is possible to access to the list of these agents by using the variable "simulations" of the experiment. 
+		// Another way of accessing to the simulations consists in using the name of model + _model: here "batch_example_model"
+		//in this example, we ask all the simulation agents of the run to save (at the end of the simulation) the people population in a shapefile with their is_infected and is_immune attributes 
+		ask simulations
+		{	
+			float finalYield <- last (real_yield_in_tons);
+			// initialise value and the end result that we get
+			save [number_of_parasitoid, number_of_predator, finalYield] to: "../results/batch/every_week_natural_enemies.csv" format:"csv" rewrite: false;
+			write("number of parasitoid: " + number_of_parasitoid);
+			write("number of predator: " + number_of_predator);
+			write("real_yield_in_tons: " + real_yield_in_tons);
+			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
 		}
 	}
 }
