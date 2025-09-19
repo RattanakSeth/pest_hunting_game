@@ -1086,12 +1086,6 @@ experiment Ex parent: Base{
 		
 		//TODO: check next
 		display plots type: 2d refresh:every(per_cycle_count#cycles){
-				/*chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
-				    data "Pest" value: length(Pest) color: PEST_COLOR;
-				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
-				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
-				    //data "Treatment" value: (treatments[cycle_count] = 1 ? treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
-				}*/
 				
 				chart "Crop Yield Rice Paddy 0: ID" + RicePaddy[0].id + (RicePaddy[0].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[0].farmer.decision + " " + RicePaddy[0].farmer.once_per_cycle.keys:  RicePaddy[0].farmer.decision)  size: {0.5,0.5} position: {0,0} type: series {
 				    data "Real Yield (tons)" value: RicePaddy[0].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
@@ -1112,6 +1106,36 @@ experiment Ex parent: Base{
 				    data "Real Yield (tons)" value: RicePaddy[3].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: RicePaddy[3].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}
+		}
+		
+		display insectPlot type: 2d refresh: every(per_cycle_count#cycles) {
+			chart "Population Dynamics paddy 0: ID" + RicePaddy[0].id + (RicePaddy[0].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[0].farmer.decision + " " + RicePaddy[0].farmer.once_per_cycle.keys:  RicePaddy[0].farmer.decision)  size: {0.5,0.5} position: {0,0} type: series {
+				    data "Pest" value: length(RicePaddy[0].lstPest where(!dead(each))) color: PEST_COLOR;
+				    data "Parasitoid" value: length(RicePaddy[0].lstParasitoid where(!dead(each))) color: PARASITOID_COLOR;
+				    data "Predator" value: length(RicePaddy[0].lstPredator where(!dead(each))) color: PREDATOR_COLOR;
+				    data "Treatment" value: (RicePaddy[0].treatments[cycle_count] = 1 ? RicePaddy[0].treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
+			}
+			
+			chart "Population Dynamics paddy 1: ID" + RicePaddy[1].id + (RicePaddy[1].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[1].farmer.decision + " " + RicePaddy[1].farmer.once_per_cycle.keys:  RicePaddy[1].farmer.decision)  size: {0.5,0.5} position: {0.5,0} type: series {
+				    data "Pest" value: length(RicePaddy[1].lstPest where(!dead(each))) color: PEST_COLOR;
+				    data "Parasitoid" value: length(RicePaddy[1].lstParasitoid where(!dead(each))) color: PARASITOID_COLOR;
+				    data "Predator" value: length(RicePaddy[1].lstPredator where(!dead(each))) color: PREDATOR_COLOR;
+				    data "Treatment" value: (RicePaddy[1].treatments[cycle_count] = 1 ? RicePaddy[1].treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
+			}
+			
+			chart "Population Dynamics paddy 2: ID" + RicePaddy[2].id + (RicePaddy[2].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[2].farmer.decision + " " + RicePaddy[2].farmer.once_per_cycle.keys:  RicePaddy[2].farmer.decision)  size: {0.5,0.5} position: {0,0.5} type: series {
+				    data "Pest" value: length(RicePaddy[2].lstPest where(!dead(each))) color: PEST_COLOR;
+				    data "Parasitoid" value: length(RicePaddy[2].lstParasitoid where(!dead(each))) color: PARASITOID_COLOR;
+				    data "Predator" value: length(RicePaddy[2].lstPredator where(!dead(each))) color: PREDATOR_COLOR;
+				    data "Treatment" value: (RicePaddy[2].treatments[cycle_count] = 1 ? RicePaddy[2].treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
+			}
+			
+			chart "Population Dynamics paddy 3: ID" + RicePaddy[3].id + (RicePaddy[3].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[3].farmer.decision + " " + RicePaddy[3].farmer.once_per_cycle.keys:  RicePaddy[3].farmer.decision)  size: {0.5,0.5} position: {0.5,0.5} type: series {
+				    data "Pest" value: length(RicePaddy[3].lstPest where(!dead(each))) color: PEST_COLOR;
+				    data "Parasitoid" value: length(RicePaddy[3].lstParasitoid where(!dead(each))) color: PARASITOID_COLOR;
+				    data "Predator" value: length(RicePaddy[3].lstPredator where(!dead(each))) color: PREDATOR_COLOR;
+				    data "Treatment" value: (RicePaddy[3].treatments[cycle_count] = 1 ? RicePaddy[3].treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
+			}
 		}
 	}
 }
