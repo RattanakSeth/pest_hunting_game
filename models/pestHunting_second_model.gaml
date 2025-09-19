@@ -105,7 +105,7 @@ global {
 	bool is_interacted <- true;
 	bool is_spray_all_time <- true;
 	bool is_batch_experiment <- false;
-	string spray;
+	string spray <- ONLY_2ND_WEEK;
 	//bool 
 //	geometry shape <- rectangle(20,30);
 	init {
@@ -674,6 +674,32 @@ global {
 //			//ask world {do get_total_prev_treatment();}
 //			is_farmer_decided <- true;
 //	}
+
+	int get_week_num(string sprayWeek) {
+		if (sprayWeek = ONLY_1ST_WEEK) {
+				return 1;
+			} else if (sprayWeek = ONLY_2ND_WEEK) {
+				return 2; 
+			} else if (sprayWeek = ONLY_3RD_WEEK){
+				return 3;
+			} else if (sprayWeek = ONLY_4TH_WEEK) {
+				return 4;
+			} else if (sprayWeek = ONLY_5TH_WEEK) {
+				return 5;
+			} else if (sprayWeek = ONLY_6TH_WEEK) {
+				return 6;
+			} else if (sprayWeek = ONLY_7TH_WEEK) {
+				return 7;
+			} else if (sprayWeek = ONLY_8TH_WEEK) {
+				return 8;
+			} else if (sprayWeek = ONLY_9TH_WEEK) {
+				return 9;
+			} else if (sprayWeek = ONLY_10TH_WEEK) {
+				return 10;
+			} else if (sprayWeek = ONLY_11TH_WEEK) {
+				return 11;
+			} 
+	}
 	
 }
 
@@ -1404,10 +1430,6 @@ experiment "Batch None" type: batch keep_seed: true repeat: 1 until: (cycle_coun
 		write("is_interacted: " + is_interacted);
 	}
 	
-	reflex check {
-		write("working on .. : " + time); 
-	}
-	
 	reflex end_of_runs
 	{
 		// each simulation of the run is an agent; it is possible to access to the list of these agents by using the variable "simulations" of the experiment. 
@@ -1420,13 +1442,14 @@ experiment "Batch None" type: batch keep_seed: true repeat: 1 until: (cycle_coun
 			save [number_of_parasitoid, number_of_predator, finalYield] to: "../results/batch/none_natural_enemies.csv" format:"csv" rewrite: false;
 			write("number of parasitoid: " + number_of_parasitoid);
 			write("number of predator: " + number_of_predator);
-			write("real_yield_in_tons: " + real_yield_in_tons);
+			write("real_yield_in_tons: " + last(real_yield_in_tons));
 			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
 		}
 	}
 }
 
 experiment "Batch every week" type: batch keep_seed: true repeat: 1 until: (cycle_count = 13){
+	// Exploration method
 	parameter "Number of parasitoid" category: "Insect" var: number_of_parasitoid min: 0 max: 40 step: 1; // 25
 	parameter "Number of predator" category: "Insect" var: number_of_predator min: 0 max: 30 step: 1; // 7
 	
@@ -1449,17 +1472,23 @@ experiment "Batch every week" type: batch keep_seed: true repeat: 1 until: (cycl
 			save [number_of_parasitoid, number_of_predator, finalYield] to: "../results/batch/every_week_natural_enemies.csv" format:"csv" rewrite: false;
 			write("number of parasitoid: " + number_of_parasitoid);
 			write("number of predator: " + number_of_predator);
-			write("real_yield_in_tons: " + real_yield_in_tons);
+			write("real_yield_in_tons: " + last(real_yield_in_tons));
 			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
 		}
 	}
 }
 
-// TODO: next add spray decision their
 experiment "Batch once per cycle" type: batch keep_seed: true repeat: 1 until: (cycle_count = 13){
 	parameter "Number of parasitoid" category: "Insect" var: number_of_parasitoid min: 0 max: 40 step: 1; // 25
 	parameter "Number of predator" category: "Insect" var: number_of_predator min: 0 max: 30 step: 1; // 7
-	//parameter "Spray" category: "Pesticide" var: spray;
+	parameter "Spray" category: "Pesticide" var: spray among: [ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
+	
+//	string ONLY_6TH_WEEK const: true <- 'Only 6th week';
+//	string ONLY_7TH_WEEK const: true <- 'Only 7th week';
+//	string ONLY_8TH_WEEK const: true <- 'Only 8th week';
+//	string ONLY_9TH_WEEK const: true <- 'Only 9th week';
+//	string ONLY_10TH_WEEK const: true <- 'Only 10th week';
+//	string ONLY_11TH_WEEK const: true <- 'Only 11th week';
 	
 	init {
 		is_interacted <- false;
@@ -1476,11 +1505,14 @@ experiment "Batch once per cycle" type: batch keep_seed: true repeat: 1 until: (
 		ask simulations
 		{	
 			float finalYield <- last (real_yield_in_tons);
+			int sprayWeek <- get_week_num(spray);
+			
 			// initialise value and the end result that we get
-			save [number_of_parasitoid, number_of_predator, finalYield] to: "../results/batch/every_week_natural_enemies.csv" format:"csv" rewrite: false;
+			save [number_of_parasitoid, number_of_predator, sprayWeek, finalYield] to: "../results/batch/once_per_yield_natural_enemies.csv" format:"csv" rewrite: false;
 			write("number of parasitoid: " + number_of_parasitoid);
 			write("number of predator: " + number_of_predator);
-			write("real_yield_in_tons: " + real_yield_in_tons);
+			write("spray week: " + spray);
+			write("real_yield_in_tons: " + last(real_yield_in_tons));
 			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
 		}
 	}
