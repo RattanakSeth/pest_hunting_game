@@ -1097,7 +1097,7 @@ experiment Ex parent: Base{
 				    data "Max yield (tons)" value: RicePaddy[1].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}
 				
-				chart "Crop Yield Rice Paddy 2: ID" + RicePaddy[2].id + (RicePaddy[1].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[1].farmer.decision + " " + RicePaddy[2].farmer.once_per_cycle.keys:  RicePaddy[2].farmer.decision)  size: {0.5,0.5} position: {0,0.5} type: series {
+				chart "Crop Yield Rice Paddy 2: ID" + RicePaddy[2].id + (RicePaddy[2].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[2].farmer.decision + " " + RicePaddy[2].farmer.once_per_cycle.keys:  RicePaddy[2].farmer.decision)  size: {0.5,0.5} position: {0,0.5} type: series {
 				    data "Real Yield (tons)" value: RicePaddy[2].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: RicePaddy[2].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}

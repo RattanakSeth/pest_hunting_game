@@ -82,6 +82,8 @@ global {
 	int rice_field_height <- 10;
 	int number_of_parasitoid <- 25;
 	int number_of_predator <- 7;
+	int week_pest_come <- 2 min: 1 max: 12;
+	
 	
 	init {
 		create Pest  number: number_of_pest {
@@ -302,29 +304,24 @@ global {
 		}
 	}
 	
-	action update_predation_rate {
-		float tmp_predation_rate <- pests_total[length(pests_total)-1] = 0 ? 0 : (total_pest_eaten[length(total_pest_eaten)-1]/ pests_total[length(pests_total)-1]);
-		add tmp_predation_rate to: predation_rates;
-		//write("tmp predation rate: " + tmp_predation_rate);
-		//addpredation_rates
-	}
-	
 	action update_pest_non_resistant {
 		/**
 		 * This function uses to update each cycle_count (7 days or a week)
+		 * Pest will come in difference week
+		 * Pest resistance will start from 198.0
 		 */
-		if (cycle_count < 2) {
+		if (cycle_count < week_pest_come) {
 //			predation_rate <- (number_of_pest = 0) ? 0 : ((total_pest_eaten[length(total_pest_eaten)-1] / number_of_pest));
 //			add predation_rate to: predation_rates;
 			add 0.0 to: pest_non_resistants;
 		}
-		else if (cycle_count = 2) {
+		else if (cycle_count = week_pest_come) {
 			//pest_non_resistant <- 198.0;
 			add 198.0 to: pest_non_resistants;
 //			predation_rate <- number_of_pest = 0 ? 0 : (total_pest_eaten / number_of_pest);
 //			add predation_rate to: predation_rates;
 		}
-		else if (cycle_count > 2) {
+		else if (cycle_count > week_pest_come) {
 			//write("\npest non__resist in week: " + cycle_count);
 			float prev_predation_rate <- predation_rates[length(predation_rates) - 1]; // it will calc after this
 			//write("prev predation_rate: " + prev_predation_rate + " length: " + length(predation_rates));
@@ -344,14 +341,17 @@ global {
 	}
 	
 	action update_pest_resistant {
-		if (cycle_count < 2) {
+		/*
+		 * pest resistants will start from 2.0
+		 */
+		if (cycle_count < week_pest_come) {
 			float pest_resistant <- 0.0;
 			add pest_resistant to: pest_resistants;
 		}
-		if (cycle_count = 2) {
+		if (cycle_count = week_pest_come) {
 			float pest_resistant <- 2.0;
 			add pest_resistant to: pest_resistants;
-		} else if (cycle_count > 2) {
+		} else if (cycle_count > week_pest_come) {
 			float prev_pest_resistant <- pest_resistants[length(pest_resistants) - 1];
 			float prev_predation_rate <- predation_rates[length(predation_rates) - 1];
 			float pest_resistant <- prev_pest_resistant * (1 - prev_predation_rate) * (get_total_prev_treatment() > 1 ? resistance_reproduction_rate_pesticide_pest : resistance_reproduction_pest) + 0.2;
@@ -380,6 +380,11 @@ global {
 				}
 			}
 		}
+	}
+	
+	action update_predation_rate {
+		float tmp_predation_rate <- pests_total[length(pests_total)-1] = 0 ? 0 : (total_pest_eaten[length(total_pest_eaten)-1]/ pests_total[length(pests_total)-1]);
+		add tmp_predation_rate to: predation_rates;
 	}
 	
 	action renew_variable_each_cycle_count {
@@ -850,6 +855,7 @@ experiment Basic type: gui{
 	parameter "Height of rice field" var: rice_field_height <- 10;
 	parameter "Number of parasitoid" var: number_of_parasitoid;
 	parameter "Number of predator" var: number_of_predator;
+	parameter "Week of pest come" var: week_pest_come;
 	
 	output {
 		display riceField type: java2D{

@@ -95,6 +95,7 @@ global {
 	int rice_field_height <- 10 min: 10;
 	int number_of_parasitoid <- 25 min: 0;
 	int number_of_predator <- 7 min: 0;
+	int week_pest_come <- 2 min: 1 max: 12;
 	
 	// In between treatment store
 	list treatment_areas <- [];
@@ -106,6 +107,7 @@ global {
 	bool is_spray_all_time <- true;
 	bool is_batch_experiment <- false;
 	string spray <- ONLY_2ND_WEEK;
+	
 	//bool 
 //	geometry shape <- rectangle(20,30);
 	init {
@@ -338,24 +340,17 @@ global {
 		}
 	}
 	
-	action update_predation_rate {
-		float tmp_predation_rate <- pests_total[length(pests_total)-1] = 0 ? 0 : (total_pest_eaten[length(total_pest_eaten)-1]/ pests_total[length(pests_total)-1]);
-		add tmp_predation_rate to: predation_rates;
-		//write("tmp predation rate: " + tmp_predation_rate);
-		//addpredation_rates
-	}
-	
 	action update_pest_non_resistant {
 		/**
 		 * This function uses to update each cycle_count (7 days or a week)
 		 */
-		if (cycle_count < 2) {
+		if (cycle_count < week_pest_come) {
 			add 0.0 to: pest_non_resistants;
 		}
-		else if (cycle_count = 2) {
+		else if (cycle_count = week_pest_come) {
 			add 198.0 to: pest_non_resistants;
 		}
-		else if (cycle_count > 2) {
+		else if (cycle_count > week_pest_come) {
 			//write("\npest non__resist in week: " + cycle_count);
 			float prev_predation_rate <- predation_rates[length(predation_rates) - 1]; // it will calc after this
 			int prev_treatment <- treatments[length(treatments) - 1];
@@ -372,14 +367,14 @@ global {
 	}
 	
 	action update_pest_resistant {
-		if (cycle_count < 2) {
+		if (cycle_count < week_pest_come) {
 			float pest_resistant <- 0.0;
 			add pest_resistant to: pest_resistants;
 		}
-		if (cycle_count = 2) {
+		if (cycle_count = week_pest_come) {
 			float pest_resistant <- 2.0;
 			add pest_resistant to: pest_resistants;
-		} else if (cycle_count > 2) {
+		} else if (cycle_count > week_pest_come) {
 			float prev_pest_resistant <- pest_resistants[length(pest_resistants) - 1];
 			float prev_predation_rate <- predation_rates[length(predation_rates) - 1];
 			float pest_resistant <- prev_pest_resistant * (1 - prev_predation_rate) * (get_total_prev_treatment() > 1 ? resistance_reproduction_rate_pesticide_pest : resistance_reproduction_pest) + 0.2;
@@ -408,6 +403,13 @@ global {
 				}
 			}
 		}
+	}
+	
+	action update_predation_rate {
+		float tmp_predation_rate <- pests_total[length(pests_total)-1] = 0 ? 0 : (total_pest_eaten[length(total_pest_eaten)-1]/ pests_total[length(pests_total)-1]);
+		add tmp_predation_rate to: predation_rates;
+		//write("tmp predation rate: " + tmp_predation_rate);
+		//addpredation_rates
 	}
 	
 	action renew_variable_each_cycle_count {
@@ -678,27 +680,31 @@ global {
 	int get_week_num(string sprayWeek) {
 		if (sprayWeek = ONLY_1ST_WEEK) {
 				return 1;
-			} else if (sprayWeek = ONLY_2ND_WEEK) {
-				return 2; 
-			} else if (sprayWeek = ONLY_3RD_WEEK){
-				return 3;
-			} else if (sprayWeek = ONLY_4TH_WEEK) {
-				return 4;
-			} else if (sprayWeek = ONLY_5TH_WEEK) {
-				return 5;
-			} else if (sprayWeek = ONLY_6TH_WEEK) {
-				return 6;
-			} else if (sprayWeek = ONLY_7TH_WEEK) {
-				return 7;
-			} else if (sprayWeek = ONLY_8TH_WEEK) {
-				return 8;
-			} else if (sprayWeek = ONLY_9TH_WEEK) {
-				return 9;
-			} else if (sprayWeek = ONLY_10TH_WEEK) {
-				return 10;
-			} else if (sprayWeek = ONLY_11TH_WEEK) {
-				return 11;
-			} 
+		} else if (sprayWeek = ONLY_2ND_WEEK) {
+			return 2; 
+		} else if (sprayWeek = ONLY_3RD_WEEK){
+			return 3;
+		} else if (sprayWeek = ONLY_4TH_WEEK) {
+			return 4;
+		} else if (sprayWeek = ONLY_5TH_WEEK) {
+			return 5;
+		} else if (sprayWeek = ONLY_6TH_WEEK) {
+			return 6;
+		} else if (sprayWeek = ONLY_7TH_WEEK) {
+			return 7;
+		} else if (sprayWeek = ONLY_8TH_WEEK) {
+			return 8;
+		} else if (sprayWeek = ONLY_9TH_WEEK) {
+			return 9;
+		} else if (sprayWeek = ONLY_10TH_WEEK) {
+			return 10;
+		} else if (sprayWeek = ONLY_11TH_WEEK) {
+			return 11;
+		} else if (sprayWeek = NONE) {
+			return 0; // No spray
+		} else if (sprayWeek = ALL_WEEK) {
+			return 12;
+		}
 	}
 	
 }
@@ -1115,6 +1121,7 @@ experiment Base virtual: true {
 	parameter "Height of rice field" category: "Rice Paddy" var: rice_field_height <- 10;
 	parameter "Number of parasitoid" category: "Insect" var: number_of_parasitoid;
 	parameter "Number of predator" category: "Insect" var: number_of_predator;
+	parameter "Week of pest come" category: "Insect" var: week_pest_come;
 	
 	output {
 		monitor "Number of parasitoid" value: length(Parasitoid);
@@ -1355,7 +1362,7 @@ experiment "Only 1st Week" parent: Base {
 	}
 }
 
-experiment "Batch Experiment" parent: Base {
+experiment "Batch Experiment UI" parent: Base {
 	init {
 		// FOR SELF
 		is_interacted <- false;
@@ -1412,9 +1419,9 @@ experiment "Batch Experiment" parent: Base {
                 y <- y + 25#px;
 			}
 			
-			// TODO: farmer owned their own field
+			// farmer owned their own field
 			// Now experiment base on all field as a hactar grid. each farmer has a hactar
-//			species ExperimentFarmerNoTreatment;
+			// species ExperimentFarmerNoTreatment;
 		}
 	}
 }
@@ -1512,6 +1519,36 @@ experiment "Batch once per cycle" type: batch keep_seed: true repeat: 1 until: (
 			write("number of parasitoid: " + number_of_parasitoid);
 			write("number of predator: " + number_of_predator);
 			write("spray week: " + spray);
+			write("real_yield_in_tons: " + last(real_yield_in_tons));
+			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
+		}
+	}
+}
+
+experiment "Batch pest arrived" type: batch keep_seed: true repeat: 1 until: (cycle_count = 13) {
+	parameter "Number of parasitoid" category: "Insect" var: number_of_parasitoid min: 0 max: 40 step: 5; // 25
+	parameter "Number of predator" category: "Insect" var: number_of_predator min: 0 max: 30 step: 5; // 7
+	parameter "Spray" category: "Pesticide" var: spray among: [NONE, ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
+	parameter "Week of pest come" category: "Insect" var: week_pest_come min: 1 max: 12 step: 1;
+	
+	init {
+		is_interacted <- false;
+		is_batch_experiment <- true;
+	}
+	
+	reflex end_of_runs
+	{ 
+		ask simulations
+		{	
+			float finalYield <- last (real_yield_in_tons);
+			int sprayWeek <- get_week_num(spray);
+			
+			// initialise value and the end result that we get
+			save [number_of_parasitoid, number_of_predator, sprayWeek, week_pest_come, finalYield] to: "../results/batch/week_pest_come_natural_enemies.csv" format:"csv" rewrite: false;
+			write("number of parasitoid: " + number_of_parasitoid);
+			write("number of predator: " + number_of_predator);
+			write("spray week: " + spray);
+			write("Week pest come: " + week_pest_come);
 			write("real_yield_in_tons: " + last(real_yield_in_tons));
 			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
 		}
