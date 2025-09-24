@@ -95,7 +95,7 @@ global {
 	int rice_field_height <- 10 min: 10;
 	int number_of_parasitoid <- 25 min: 0;
 	int number_of_predator <- 7 min: 0;
-	int week_pest_come <- 2 min: 1 max: 12;
+	int week_pest_come <- 2 min: 0 max: 12;
 	
 	// In between treatment store
 	list treatment_areas <- [];
@@ -1178,7 +1178,8 @@ experiment Experiment type: gui parent: Base{
 		// every 28 cycles equal to one cycle count ( a week)
 		display plots type: 2d refresh:every(per_cycle_count#cycles){
 				chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
-				    data "Pest" value: length(Pest) color: PEST_COLOR;
+				    data "Total Pest" value: length(Pest) color: PEST_COLOR;
+				    data "Pest resistance" value: pest_resistants[cycle_count] color: #yellow;
 				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
 				    data "Predator" value: length(Predator) color: PREDATOR_COLOR;
 				    data "Treatment" value: (treatments[cycle_count] = 1 ? treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50

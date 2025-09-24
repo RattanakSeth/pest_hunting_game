@@ -37,13 +37,13 @@ global {
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 200; // first step should be 0
 
-	float step <-  40#s;//1#week; from 2 days up, it's accurate (insect will only move inside a grid)
+	float step <-  1#week;//1#week; from 2 days up, it's accurate (insect will only move inside a grid)
 	geometry shape <- square(1000);
 	float second_count <- 0.0;
 	int day <- 0;
 	int cycle_count <- 0; // cycle count
 	//int cycle <- 0;
-	float per_cycle_count <- 1#week - 1#day; // occur when 1#week
+	float per_cycle_count <- 1#week; // occur when 1#week
 	
 	// initialise variable
 	// parasitoid
@@ -153,7 +153,7 @@ global {
 	
 	reflex check_date_time {
 		
-
+		
 //		second_count <- second_count + step;
 //		write(second_count);
 //		cycle_count <- int(second_count/1#week);
@@ -172,7 +172,7 @@ global {
 	
 }
 
-grid PaddyField width: 2 height: 2 {
+grid PaddyField width: 1 height: 1 {
 		rgb color <- #green;
 //		float cell_value min: 0.0 max: 3.0 <- 3.0;
 		bool is_free <- true;
@@ -1024,7 +1024,7 @@ species RiceMonitor {
 		//write("all farmer decided: " + all_farmer_decided);
 	}
 	
-	reflex stop_experiment when: cycle_count = 12 { 
+	reflex stop_experiment when: cycle_count = 13 { 
 		write("Rice harvested, stop experiment.");
 		ask world {
 			do pause;
