@@ -4,7 +4,7 @@
 * Author: rattanak
 * A grid is field of farmer with a hectar
 * A big to small grid with default 100 farmer
-* Tags: A grid a farmer
+* Tags: A grid a farmer with one hectar rice field
 */
 
 
@@ -14,6 +14,9 @@ global {
 	rgb PARASITOID_COLOR const: true <- #black;
 	rgb PREDATOR_COLOR const: true <- #violet;
 	rgb PEST_COLOR const: true <- #red;
+	map<string, int> PARASITOID <- ['wasp'::1];
+	map<string, int> PREDATOR <- ['spider'::4, 'bird':: 5];
+	map<string, int> PEST <- ['bph'::9];
 	
 	// apply pesticde decsion of farmer
 	string NONE const: true <- 'none';//["none","all","second week"]
@@ -37,7 +40,7 @@ global {
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 200; // first step should be 0
 
-	float step <-  1#week;//1#week; from 2 days up, it's accurate (insect will only move inside a grid)
+	float step <-  1#s;//1#week; from 2 days up, it's accurate (insect will only move inside a grid)
 	geometry shape <- square(1000);
 	float second_count <- 0.0;
 	int day <- 0;
@@ -772,7 +775,7 @@ species Insect skills: [moving] {
 	//rice_grid target_cell;
 	//List of the cells already passed by the agents and memorised
 	//list<rice_grid> memory;
-	float speed <- 1.6 #km/#day;//1.6 #km/#day;
+	float speed <- 5.6 #km/#day;//1.6 #km/#day;
 	geometry shape <- square(2);
 	point goal;
 	bool is_chased <- false;
@@ -792,13 +795,13 @@ species Insect skills: [moving] {
 }
 
 species Pest parent:Insect {
-	float speed <- 1.6 #km/#day;
+	float speed <- 5.6 #km/#day;
 	rgb color <- #red;
 	geometry shape <- circle(3);
 	
 	reflex fleeing {
 		if (length((cell.ricePaddy.lstPredator where (each != nil and !dead(each) and each distance_to self < perception_radius))) > 0 or length((cell.ricePaddy.lstParasitoid where (each != nil and !dead(each) and each distance_to self < perception_radius))) > 0) {
-			speed <- 2.0 #km/#day;
+			speed <- 6.0 #km/#day;
 			is_chased <- true;
 			color <- # lime;
 			if (goal = nil) {
@@ -824,7 +827,7 @@ species Pest parent:Insect {
 		{
 			is_chased <- false;
 			color <- #red;
-			speed <- 1.6 #km/#day;
+			speed <- 5.6 #km/#day;
 		}
 	}
 	
@@ -837,6 +840,7 @@ species Parasitoid parent: Insect {
 	int pest_eaten <- 0;
 	geometry shape <- triangle(3);
 	rgb color <- #black;
+	float speed <- 2.0 #km/#hour;
 	
 	reflex hunting when: length(cell.ricePaddy.lstPest) > cell.ricePaddy.pests_total[length(cell.ricePaddy.pests_total)-1]//cell.ricePaddy.potential_pests_eaten_by_parasitoids[length(cell.ricePaddy.potential_pests_eaten_by_parasitoids)-1]
 	{
@@ -854,7 +858,7 @@ species Parasitoid parent: Insect {
 
 				if (a != nil)
 				{
-					speed <- 2.5 #km/#day;
+					speed <- 2.88 #km/#hour;
 					goal <- a.location;
 				}
 
@@ -878,7 +882,7 @@ species Parasitoid parent: Insect {
 //			}
 
 			goal <- nil;
-			speed <- 1.6 #km/#day;
+			speed <- 2.0 #km/#hour;
 		}
 
 	}

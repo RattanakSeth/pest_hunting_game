@@ -100,8 +100,8 @@ global {
 	// insect intialise params outside
 	float perception_radius <- 2.0;
 	
-	
 	// UI Initialise
+	image_file bph_shape const: true <- file('../../images/bph.png');
 	
 	// Experiment variable
 	bool is_interacted <- true;
@@ -944,7 +944,8 @@ species Pest parent:Insect {
 	}
 	
 	aspect default {
-		draw shape color: color;
+		//draw shape color: color;
+		draw bph_shape size: {4, 2} color: color rotate:  is_chased ? heading + 90: 0;
 	}
 }
 
@@ -1081,6 +1082,10 @@ experiment Base virtual: true {
 experiment Experiment type: gui parent: Base{
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- false disables: [spray];
 	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
+	
+	init {
+		week_pest_come <- 0;
+	}
 	output {
 		display riceField {
 			grid rice_grid;// border: rgba(1,1,1, 0.2);// lines: #black;
@@ -1214,10 +1219,13 @@ experiment "No Treatment" type: gui parent: Base {
 }
 
 
-experiment "Treatment All" parent: Base{
+experiment "Treatment every week" parent: Base{
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- false read_only: true;
 	parameter "Spary decision" category:"Pesticide" var: spray <- ALL_WEEK read_only: true;
 	
+	init {
+		step <- 1#week;
+	}
 	output {
 		layout #split editors: false;
 		display riceField {
@@ -1273,6 +1281,7 @@ experiment "Only 1st Week" parent: Base {
 //	parameter "Interactive" category:"Pesticide" var: is_interacted <- false read_only: true;
 //	parameter "Spary decision" category:"Pesticide" var: spray <- ALL_WEEK read_only: true;
 	init {
+		step <- 1#week;
 		is_interacted <- false;
 		spray <- ONLY_1ST_WEEK;
 	}
@@ -1310,6 +1319,7 @@ experiment "Batch None" type: batch keep_seed: true repeat: 1 until: (cycle_coun
 	parameter "Number of predator" category: "Insect" var: number_of_predator min: 0 max: 30 step: 1; // 7
 	
 	init {
+		step <- 1#week;
 		is_interacted <- false;
 		is_batch_experiment <- true;
 		spray <- NONE;
@@ -1340,6 +1350,7 @@ experiment "Batch every week" type: batch keep_seed: true repeat: 1 until: (cycl
 	parameter "Number of predator" category: "Insect" var: number_of_predator min: 0 max: 30 step: 1; // 7
 	
 	init {
+		step <- 1#week;
 		is_interacted <- false;
 		is_batch_experiment <- true;
 		spray <- ALL_WEEK;
@@ -1377,6 +1388,7 @@ experiment "Batch once per cycle" type: batch keep_seed: true repeat: 1 until: (
 //	string ONLY_11TH_WEEK const: true <- 'Only 11th week';
 	
 	init {
+		step <- 1#week;
 		is_interacted <- false;
 		is_batch_experiment <- true;
 		//spray <- ALL_WEEK;
@@ -1411,6 +1423,7 @@ experiment "Batch pest arrived" type: batch keep_seed: true repeat: 1 until: (cy
 	parameter "Week of pest come" category: "Insect" var: week_pest_come min: 1 max: 12 step: 1;
 	
 	init {
+		step <- 1#week;
 		is_interacted <- false;
 		is_batch_experiment <- true;
 	}

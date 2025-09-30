@@ -57,7 +57,7 @@ global {
 	action initializeParcel {
 		ask Parcel {
 			loop i from: 1 to: lan_unit_b_c.rows - 1 {
-				if (lan_unit_b_c at { 0, i } = "" + land_unit) { // tai vi doc tu file csv toan bo la text, string, trong khi id la int neu doi thanh so int(var)
+				if (lan_unit_b_c at { 0, i } = "" + land_unit) {
  					let tmpLUT <- lan_unit_b_c	at { 1, i };
  					//write("tmp LUT: " + tmpLUT);
 					if (!(LUT_avail contains tmpLUT)) {
@@ -73,13 +73,11 @@ global {
 			create LUT {
 				land_unit_id <- "" + lan_unit_b_c at { 0, i };
 				landuse_type <- "" + lan_unit_b_c at { 2, i };
-				land_suitability <- "" + lan_unit_b_c at { 3, i };
+				land_suitability <- int(lan_unit_b_c at { 3, i });
 				profit_rate <- lan_unit_b_c at { 4, i };
 				b_c_rate <- lan_unit_b_c at { 5, i };
 			}
-
 		}
-
 	}
 	
 }
@@ -134,29 +132,29 @@ species Parcel {
 	action setColor {
 			let parcels type: list of: Parcel <- list(Parcel);
 			if (landuse_type = 'rice') {
-				set color <- rgb('yellow');
+				color <- rgb('yellow');
 			}
 
 			if (landuse_type = 'veg') {
-				set color <- rgb('green');
+				color <- rgb('green');
 			}
 
 			if (landuse_type = 'shrp') {
-				set color <- rgb('blue');
+				color <- rgb('blue');
 			}
 
 			if (landuse_type = 'ONT') {
-				set color <- rgb([235,126,20]); // mau nau
+				color <- rgb([235,126,20]); // mau nau
 			}
 			if (landuse_type = 'coco_cacao') {
-				set color <- rgb([16,171,5]); // mau xanh la dam
+				color <- rgb([16,171,5]); // mau xanh la dam
 			}
 			if (landuse_type = 'shrp_rice') {
-				set color <- rgb([14,131,198]); // xanh cyan
+				color <- rgb([14,131,198]); // xanh cyan
 			}
 			//2rice_1veg
 			if (landuse_type = '2rice_1veg') {
-				set color <- rgb([237,244,56]);
+				color <- rgb([237,244,56]);
 			}
 
 		}
@@ -167,8 +165,8 @@ species LUT {
 	string land_unit_id <- "";
 	string landuse_type <- "";
 	int land_suitability <- 4;  // 4 is not suitable; 1 is the most suitable
-	float profit_rate <- 0;
-	float b_c_rate <- 0;
+	float profit_rate <- 0.0;
+	float b_c_rate <- 0.0;
 }
 
 species Proprietaire { // owner of the land
@@ -180,10 +178,11 @@ species Proprietaire { // owner of the land
 			
 			do calculate_area;
 		}
+		
 		action calculate_area {
 			ask monParcel{
 				if self.landuse_type ="shrp"{
-					area_crevette_ha <-  area_crevette_ha+  self.terrain ;	
+					area_crevette_ha <-  area_crevette_ha +  self.terrain ;	
 				}
 				if self.landuse_type ="rice"{
 					area_rice_ha <- area_rice_ha + self.terrain ;	
@@ -197,60 +196,43 @@ species Proprietaire { // owner of the land
 			
 			}
 		}
+		
 		action change_landuse_type_base_on_benifit_cost {
 
 			// If there are multiple types of adaptive supplies, select one of those adaptive supplies.
 			ask monParcel{
-				//self.landuse_type<-"coco_cacao";
-				//list aLUT <- LUT where (each.land_unit_id = ""+ self.land_unit); // land_unit la cua thua dat
-				//write aLUT as list;
+				list<LUT> aLUT <- LUT where (each.land_unit_id = ""+ self.land_unit);
 				int Thichghitot <- 9999;
-				int tmp_b_c_rate <-0;
-				int tmp_profit_rate <-0;
-				
-				//write("aLUT length: " + aLUT + length(aLUT));
-//				ask aLUT {
-//					write("land_suitability: " + land_suitability);
-//				}
-////				ask aLUT{
-//					// tim cap thich nghi cao nhat
-//					if (land_suitability <= Thichghitot )and (land_suitability<=3) and (myself.landuse_type != self.landuse_type) {
-//						//if (profit_rate> tmp_profit_rate){
-//							if (b_c_rate > tmp_b_c_rate ){
-//							//tmp_profit_rate <- profit_rate;
-//							tmp_b_c_rate<- b_c_rate;
-//							Thichghitot <- land_suitability;
-//							myself.landuse_type<-""+ self.landuse_type;  // trong vong lap ask, self; myself doi tuong ngoai vongf lap ask
-//						}
-//						 
-//					}
-//				}
-//				loop lut over: aLUT {
-//					write(lut);
-//				}
-				
-			}	
-			ask target: monParcel {
+				float tmp_b_c_rate <- 0.0;
+				float tmp_profit_rate <-0.0;
+				ask aLUT {
+					//write("self.land." + self.land_suitability);
+					if (self.land_suitability <= Thichghitot and self.land_suitability <= 3 and myself.landuse_type != self.landuse_type) {
+						if (profit_rate > tmp_profit_rate and (b_c_rate > tmp_b_c_rate)) {
+							tmp_profit_rate <- profit_rate;
+							tmp_b_c_rate <- b_c_rate;
+							Thichghitot <- land_suitability;
+							myself.landuse_type <-""+ self.landuse_type; 
+						}
+					}
+				}
 				do setColor;
 			}
-
-	
 		}
 
 	
- // calculer les revenu du proprietaire 
- action calculRevenue {
-			if monParcel.landuse_type = "rice" {
-				revenue <- monParcel.product * rice_price;
-			} else {
-				if monParcel.landuse_type = "veg" {
-					revenue <- monParcel.product * vegatable_price;
-				}
+	 // calculer les revenu du proprietaire 
+	 action calculRevenue {
+		if monParcel.landuse_type = "rice" {
+			revenue <- monParcel.product * rice_price;
+		} else {
+			if monParcel.landuse_type = "veg" {
+				revenue <- monParcel.product * vegatable_price;
 			}
+		}
+	 }
 
-		} //calculRevenue 
-
-	} 
+} 
 
 experiment RunMe type: gui {
 	output {
@@ -261,9 +243,9 @@ experiment RunMe type: gui {
 		
 		display graphique {
 			chart name: 'Stock global' type: series background: rgb('white') {
-				//data 'crevette' value: produition_total_crevette color: rgb('red');
+				data 'crevette' value: produition_total_crevette color: rgb('red');
 				data 'rice' value: total_rice_production color: rgb('yellow');
-				//data 'vegatable' value: produition_total_vegatable color: rgb('green');
+				data 'vegatable' value: production_total_vegatable color: rgb('green');
 			}
 
 		}

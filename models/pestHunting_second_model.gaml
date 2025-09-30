@@ -1,8 +1,10 @@
 /**
 * Name: pestHuntingsecondmodel
-* Spray on an select grid and insect movement 
+* Make it an agent-based mdoel
+* Spray will be a whole field
+* a whole grid consists of one hectar of rice which belong to a farmer
 * Author: rattanak
-* Tags: second model, model improvement
+* Tags: second model, model improvement v2.0
 * Base on research and game formula on the excel file
 * Using grid represent as a rice fields
 * Separate experment for consideration senario
