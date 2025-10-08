@@ -7,7 +7,7 @@
 * Tags: second model, model improvement v2.0
 * Base on research and game formula on the excel file
 * Using grid represent as a rice fields
-* Separate experment for consideration senario
+* Separate experiment for consideration senario
 */
 
 
@@ -103,6 +103,8 @@ global {
 	list treatment_areas <- [];
 	
 	// UI Initialise
+	bool is_grid_clicked <- true;
+	int sticky_to_removed <- 0;
 	
 	// Experiment variable
 	bool is_interacted <- true;
@@ -522,6 +524,38 @@ global {
 		}
 	}
 	
+	action add_remove_sticky_note {
+		if (cycle_count < 1) {
+			add field_cases[0] to: remove_sticky_notes;
+			return;
+		}
+
+		float tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
+		add tmp_remove_rice_yield to: remove_sticky_notes;
+		sticky_to_removed <- abs(round(tmp_remove_rice_yield));
+	}
+	
+	action mouse_click_on_grid {
+		//list<rice_grid> rice_pest <- shuffle(rice_grid) where(each.cell_value > 0); // abs(round(tmp_remove_rice_yield)) among 
+		rice_grid selected_grid <- first(rice_grid where(each.cell_value > 0) overlapping (square(1) at_location #user_location));
+		write("grid: " + selected_grid);
+		
+		if (sticky_to_removed > 0 and selected_grid != nil) {
+			int cellValue <- int(selected_grid.cell_value);
+			sticky_to_removed <- sticky_to_removed - 1;
+			cellValue <- cellValue - 1;
+			ask selected_grid {
+				cell_value <- float(cellValue);
+				do change_color;
+			}
+		}
+		
+		// if removed all required sticky notes
+		if (cycle_count > 0 and cycle_count < 12 and sticky_to_removed <= 0) {
+			do resume;
+		}
+	}
+	
 	action sequential_var_calc{
 		// independant var
 		do calc_dynamic_yield;
@@ -552,7 +586,12 @@ global {
 		do calc_potential_yield;
 		do calc_real_yield_in_tons;
 		do calc_max_dynamic_yield;
-		do calc_sticky_notes_need_to_remove;
+		if (is_grid_clicked) {
+			do add_remove_sticky_note;
+		} else {
+			do calc_sticky_notes_need_to_remove;
+		}
+		
 	}
 	
 	
@@ -963,6 +1002,13 @@ species Farmer {
 			ask world {do check;}
 			//ask world {do get_total_prev_treatment();}
 			is_farmer_decided <- true;
+			write("do pause: " + sticky_to_removed);
+			if (sticky_to_removed > 0 and is_grid_clicked) {
+				
+				ask world {
+					do pause;
+				}
+			}
 	}
 	
 	action do_not_spray {
@@ -1081,7 +1127,7 @@ species Farmer {
 		return rice_cell;
 	}
 	
-	reflex stop_experiment when: cycle_count = 12 and !is_batch_experiment { 
+	reflex stop_experiment when: cycle_count >= 12 and !is_batch_experiment { 
 		write("Rice harvested, stop experiment.");
 		ask world {
 			do store_data_to_csv;
@@ -1097,27 +1143,6 @@ species Farmer {
 	}
 }
 
-species ExperimentFarmerAllTreatment {
-
-	reflex farmer_decision when: !is_farmer_decided and cycle_count > 0 and cycle_count < 13 {
-			write("\nWeeks: " + cycle_count);
-			// this calculation isn't related to current treatment
-			ask world {do sequential_var_calc;}
-			
-			// apply treatment
-			if (cycle_count = 0 or cycle_count = 12) {
-				add 0 to: treatments;
-			} else {
-				add 1 to: treatments;
-				
-			}
-			ask world {do check;}
-			//ask world {do get_total_prev_treatment();}
-			is_farmer_decided <- true;
-	}
-	
-}
-
 experiment Base virtual: true {
 	parameter "Width of rice field" category: "Rice Paddy" var: rice_field_width <- 10;
 	parameter "Height of rice field" category: "Rice Paddy" var: rice_field_height <- 10;
@@ -1130,12 +1155,14 @@ experiment Base virtual: true {
 		monitor "Number of predator" value: length(Predator);
 		monitor "Number of pest" value: length(Pest);
 		monitor "Week" value: cycle_count;
+		//monitor "Sticky to removed" value: sticky_to_removed;
 	}
 }
 
 experiment Experiment type: gui parent: Base{
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- true disables: [spray];
 	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
+	parameter "is grid removed" category: "Pesticide" var: is_grid_clicked <- true;
 	output {
 		display riceField {
 			grid rice_grid border: #lightgray;// lines: #black;
@@ -1144,6 +1171,7 @@ experiment Experiment type: gui parent: Base{
 			species Predator;
 			species TreatmentArea;
 			species Farmer;
+			event #mouse_down {ask simulation {do mouse_click_on_grid;}}
 			// TODO: initialise to ask params and change for experiment
 //			event "y" {ask simulation { do decide_to_spray;}}
 //			event "n" {ask simulation { do decide_not_to_spray;}}
@@ -1172,6 +1200,9 @@ experiment Experiment type: gui parent: Base{
 	                // current decision still make decision
 	                //draw "Treatment: " + (treatments[cycle_count] = 1 ? "Yes" : "No")  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
 	                //y <- y + 25#px;
+	                
+	                draw "sticky removed: " + sticky_to_removed  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                y <- y + 25#px;
 				
 			}
 		
@@ -1365,7 +1396,7 @@ experiment "Only 1st Week" parent: Base {
 	}
 }
 
-experiment "Batch Experiment UI" parent: Base {
+experiment "Run 4 Simulations" parent: Base {
 	init {
 		// FOR SELF
 		is_interacted <- false;
@@ -1425,6 +1456,13 @@ experiment "Batch Experiment UI" parent: Base {
 			// farmer owned their own field
 			// Now experiment base on all field as a hactar grid. each farmer has a hactar
 			// species ExperimentFarmerNoTreatment;
+		}
+		
+		display plot type: 2d {
+			chart "Crop Yield" size: {1,1} position: {0,0} type: series {
+			    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
+			    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
+			}
 		}
 	}
 }
