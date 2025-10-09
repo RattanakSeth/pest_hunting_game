@@ -33,7 +33,8 @@ global {
 	string ONLY_10TH_WEEK const: true <- 'Only 10th week';
 	string ONLY_11TH_WEEK const: true <- 'Only 11th week';
 	list<string> TREATMENT_BEHAVIOUR <- [NONE, ALL_WEEK, ONCE_PER_CYCLE];
-	map<int, string> TREATMENT_ONCE_A_CYLE_OPTION const:true <- [1::ONLY_1ST_WEEK, 2::ONLY_2ND_WEEK, 3::ONLY_3RD_WEEK, 4::ONLY_4TH_WEEK, 5::ONLY_5TH_WEEK, 6::ONLY_6TH_WEEK, 7::ONLY_7TH_WEEK, 8::ONLY_8TH_WEEK, 9::ONLY_9TH_WEEK, 10::ONLY_10TH_WEEK, 11::ONLY_11TH_WEEK];	
+	map<int, string> TREATMENT_ONCE_A_CYLE_OPTION const:true <- [1::ONLY_1ST_WEEK, 2::ONLY_2ND_WEEK, 3::ONLY_3RD_WEEK, 4::ONLY_4TH_WEEK, 5::ONLY_5TH_WEEK, 6::ONLY_6TH_WEEK, 7::ONLY_7TH_WEEK, 8::ONLY_8TH_WEEK, 9::ONLY_9TH_WEEK, 10::ONLY_10TH_WEEK, 11::ONLY_11TH_WEEK];
+	//map<int, string> TREATMENT_BEHAVIOURS <- [0::NONE, 13::ALL_WEEK] concat TREATMENT_ONCE_A_CYLE_OPTION;
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
 
@@ -84,6 +85,7 @@ global {
 	bool is_batch_experiment <- false;
 	string spray;
 	int num_paddy_field <- 0;
+	list behaviour_list <- [];
 	
 	// new variable
 	float perception_radius <- 20.0; //#m;
@@ -132,11 +134,26 @@ global {
 				location <- cell.location;
 				myself.farmer <- self;
 				paddy <- myself;
-				decision <- one_of(TREATMENT_BEHAVIOUR);
+				write("behaviour lst -- " + behaviour_list);
+				decision <- one_of((TREATMENT_BEHAVIOUR union behaviour_list));
+				write("behaviour list: " + behaviour_list);
+				//decision <- 
+//				ask RiceMonitor {
+//					
+//				}
+
 				if (decision = ONCE_PER_CYCLE) {
 					int rnd_choice <- rnd_choice(TREATMENT_ONCE_A_CYLE_OPTION.keys);
 					once_per_cycle <- map<int,string>(TREATMENT_ONCE_A_CYLE_OPTION.pairs where(each.key = rnd_choice));
 				}
+				
+				if (decision = ONCE_PER_CYCLE) {
+					add once_per_cycle to: behaviour_list;
+				} else {
+					add decision to: behaviour_list;
+				}
+					
+				
 				write("farmer " + id + " :" + decision + (decision = ONCE_PER_CYCLE ? " " + once_per_cycle.pairs: ""));
 			}
 			
@@ -1049,6 +1066,7 @@ species Farmer {
 }
 
 species RiceMonitor {
+	//list behaviour_list <- [];
 	reflex check {
 		//write("all farmer decided: " + all_farmer_decided);
 	}

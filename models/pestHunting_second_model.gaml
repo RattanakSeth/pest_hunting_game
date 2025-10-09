@@ -100,11 +100,12 @@ global {
 	int week_pest_come <- 2 min: 0 max: 12;
 	
 	// In between treatment store
-	list treatment_areas <- [];
+	//list treatment_areas <- [];
 	
 	// UI Initialise
-	bool is_grid_clicked <- true;
+	bool is_grid_clicked <- false;
 	int sticky_to_removed <- 0;
+	bool game_is_running <- false; // not use
 	
 	// Experiment variable
 	bool is_interacted <- true;
@@ -129,12 +130,7 @@ global {
 		}
 		
 		create Farmer;
-//		if (!is_batch_experiment) {
-//			create Farmer;
-//		} else {
-//			create Farmer;
-//		}
-		
+		//create HUD;
 		// initial variable
 		do initialise_variable;
 		//write("cycle: " + cycle);
@@ -152,7 +148,20 @@ global {
 		do sequential_var_calc;
 		do check;
 		// no treatment
-		add [] to: treatment_areas;
+		//add [] to: treatment_areas;
+		
+		// UI
+		do display_how_to_play;
+	}
+	
+	action display_how_to_play {
+		write("*** How to play *****");
+		write("if interacton is true, you will require to choose to spray or not.");
+		write("if is_grid_clicked is true, you will require to remove gird layer. Otherwise, it will remove automatically.");
+		
+		if (is_grid_clicked) {
+			write("click on the grid to remove layer of rice.");
+		}
 	}
 	
 	reflex check_date_time {
@@ -535,8 +544,7 @@ global {
 		sticky_to_removed <- abs(round(tmp_remove_rice_yield));
 	}
 	
-	action mouse_click_on_grid {
-		//list<rice_grid> rice_pest <- shuffle(rice_grid) where(each.cell_value > 0); // abs(round(tmp_remove_rice_yield)) among 
+	action mouse_click_on_grid { 
 		rice_grid selected_grid <- first(rice_grid where(each.cell_value > 0) overlapping (square(1) at_location #user_location));
 		write("grid: " + selected_grid);
 		
@@ -929,7 +937,47 @@ species Predator parent: Insect {
 	}
 }
 
+species HUD skills:[thread]{
+	
+	font hud_font <- font("Helvetica", 80, #bold) ;
+	int count <- 3;
+	bool is_counting <- false;
+	
+	aspect default {
+		if is_counting {
+			draw ""+count at:{world.shape.width/2-1, world.shape.height/2-1} 
+							color: rnd_color(255) 
+							font:hud_font ;
+		}
+		else if ! game_is_running{
+			draw "click on grid"at:{1, 10}  font:hud_font color:#red;
+			draw "to remove rice layer" at:{2, 20}  font:hud_font color:#red;
+		}
+	}
+	
+	action start_count_down {
+		count <- 3;
+		is_counting <- true;
+		
+		do run_thread interval:1#second;
+	}
+	
+	//counting down
+	action thread_action {
+		count <- count - 1;
+		if count = 0 {
+			do end_thread;
+			is_counting <- false;
+			ask world {
+				game_is_running <- true;
+			}
+		}
+	}
+	
+	
+}
 
+// didn't use
 species TreatmentArea {
 	// This a shape of drawing while farmer decide to spray
 	int i;
@@ -999,16 +1047,26 @@ species Farmer {
 			//do action: sequential_var_calc;
 			//write("treatment list: " + treatments);
 			//do check();
+			do update_pest_on_ui;
 			ask world {do check;}
 			//ask world {do get_total_prev_treatment();}
 			is_farmer_decided <- true;
-			write("do pause: " + sticky_to_removed);
+			
 			if (sticky_to_removed > 0 and is_grid_clicked) {
-				
+				write("do pause: " + sticky_to_removed);
 				ask world {
 					do pause;
 				}
 			}
+	}
+	
+	action update_pest_on_ui {
+		write("pest on ui: " + length(Pest));
+		//write("pest var: " + pests_total);
+		if (length(Pest) < pests_total[cycle_count]) {
+			// udpdate ui pest due to eating of natural enemies
+			create Pest number: pests_total[cycle_count] - length(Pest);
+		}
 	}
 	
 	action do_not_spray {
@@ -1063,7 +1121,7 @@ species Farmer {
 	
 	action in_between_treatment_decision {
 		list<rice_grid> rnd_grids <- get_fields_for_treatment();
-		add rnd_grids to: treatment_areas;
+		//add rnd_grids to: treatment_areas;
 		//list<pair<string, int>> insect_list <- []; // list of insect here
 		//write("random cell: " + length(rnd_grids));
 		loop rc over: rnd_grids {
@@ -1162,7 +1220,7 @@ experiment Base virtual: true {
 experiment Experiment type: gui parent: Base{
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- true disables: [spray];
 	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
-	parameter "is grid removed" category: "Pesticide" var: is_grid_clicked <- true;
+	parameter "is grid clicked" category: "Pesticide" var: is_grid_clicked <- false;
 	output {
 		display riceField {
 			grid rice_grid border: #lightgray;// lines: #black;
@@ -1171,6 +1229,7 @@ experiment Experiment type: gui parent: Base{
 			species Predator;
 			species TreatmentArea;
 			species Farmer;
+			//species HUD;
 			event #mouse_down {ask simulation {do mouse_click_on_grid;}}
 			// TODO: initialise to ask params and change for experiment
 //			event "y" {ask simulation { do decide_to_spray;}}
@@ -1200,10 +1259,10 @@ experiment Experiment type: gui parent: Base{
 	                // current decision still make decision
 	                //draw "Treatment: " + (treatments[cycle_count] = 1 ? "Yes" : "No")  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
 	                //y <- y + 25#px;
-	                
-	                draw "sticky removed: " + sticky_to_removed  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
-	                y <- y + 25#px;
-				
+	                if(is_grid_clicked) {
+	                	draw "sticky removed: " + sticky_to_removed  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                	y <- y + 25#px;
+	                }
 			}
 		
 		}

@@ -4,7 +4,7 @@
 * Insect fleeing and hunting
 *
 * Author: rattanak
-* Tags: 2.1
+* Tags: 2.1.0
 */
 
 
@@ -32,7 +32,7 @@ global {
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
 
-	float step <- 4 #s; 
+	float step <- 4 #s;//4 #s; 
 	float step_count <- 0.0;
 	//float hour <- 0.0;
 	//int day <- 0;
@@ -102,6 +102,8 @@ global {
 	
 	// UI Initialise
 	image_file bph_shape const: true <- file('../../images/bph.png');
+	int sticky_to_removed <- 0;
+	bool is_grid_clicked <- false;
 	
 	// Experiment variable
 	bool is_interacted <- true;
@@ -189,40 +191,6 @@ global {
 				realYield, treatment, maxDynamicYield, stickyToRemove
 			] to: "results/calc.csv" format:"csv" rewrite: false;
 		}
-		
-		// use all to float
-		// change all to float
-		/*loop i from: 0 to: 12 {
-			int cycles <- i;
-			float pest_total <- pests_total[i] with_precision 2;
-			float pestResistant <- pest_resistants[i] with_precision 1;
-			float pestNonResistant <- pest_non_resistants[i];
-			float potentialParasitoid <- potential_parasitoids[i] with_precision 2;
-			float parasitoid <- parasitoids[i] with_precision 2;
-			float potentialPestEatenByParasitoid <- potential_pests_eaten_by_parasitoids[i] with_precision 2;
-			float potentialPredator <- potential_predators[i] with_precision 2;
-			float predator <- predators[i] with_precision 2;
-			float potentialPestEatenByPredator <- potential_pests_eaten_by_predators[i];
-			float totalPotentialPestEaten <- total_potential_pests_eaten[i] with_precision 2;
-			float totalPestEaten <- total_pest_eaten[i] with_precision 2;
-			float predationRate <- predation_rates[i] with_precision 2;
-			float fieldCase <- field_cases[i] with_precision 2;
-			float dynamicYield <- dynamic_yields[i] with_precision 2;
-			float potentialYield <- potential_yields[i] with_precision 2;
-			float realYield <- real_yield_in_tons[i] with_precision 2;
-			int treatment <- treatments[i];
-			float maxDynamicYield <- max_dynamic_yields[i] with_precision 2;
-			
-			// test
-			float stickyToRemove <- remove_sticky_notes[i] with_precision 2;
-			
-			save [cycles, pest_total, pestResistant, pestNonResistant, potentialParasitoid, 
-				parasitoid, potentialPestEatenByParasitoid, potentialPredator, predator, potentialPestEatenByPredator,
-				totalPotentialPestEaten, totalPestEaten, predationRate, fieldCase, dynamicYield, potentialYield,
-				realYield, treatment, maxDynamicYield, stickyToRemove
-			] to: "../results/calc.csv" format:"csv" rewrite: false;
-		}*/
-
 	}
 	
 	action storeBPH {
@@ -496,6 +464,37 @@ global {
 		}
 	}
 	
+	action add_remove_sticky_note {
+		if (cycle_count < 1) {
+			add field_cases[0] to: remove_sticky_notes;
+			return;
+		}
+
+		float tmp_remove_rice_yield <- field_cases[length(field_cases) - 1] -  field_cases[length(field_cases) - 2];
+		add tmp_remove_rice_yield to: remove_sticky_notes;
+		sticky_to_removed <- abs(round(tmp_remove_rice_yield));
+	}
+	
+	action mouse_click_on_grid { 
+		rice_grid selected_grid <- first(rice_grid where(each.cell_value > 0) overlapping (square(1) at_location #user_location));
+		write("grid: " + selected_grid);
+		
+		if (sticky_to_removed > 0 and selected_grid != nil) {
+			int cellValue <- int(selected_grid.cell_value);
+			sticky_to_removed <- sticky_to_removed - 1;
+			cellValue <- cellValue - 1;
+			ask selected_grid {
+				cell_value <- float(cellValue);
+				do change_color;
+			}
+		}
+		
+		// if removed all required sticky notes
+		if (cycle_count > 0 and cycle_count < 12 and sticky_to_removed <= 0) {
+			do resume;
+		}
+	}
+	
 	action sequential_var_calc{
 		// independant var
 		do calc_dynamic_yield;
@@ -526,7 +525,12 @@ global {
 		do calc_potential_yield;
 		do calc_real_yield_in_tons;
 		do calc_max_dynamic_yield;
-		do calc_sticky_notes_need_to_remove;
+		//do calc_sticky_notes_need_to_remove;
+		if (is_grid_clicked) {
+			do add_remove_sticky_note;
+		} else {
+			do calc_sticky_notes_need_to_remove;
+		}
 	}
 	
 	
@@ -538,10 +542,6 @@ global {
 		// parasitoid
 		write("parasitoids: " + parasitoids);
 		write("potential parasitoid: " + potential_parasitoids);
-		
-		// pest
-		write("pest non resistant: " + pest_non_resistants);
-		write("pest resistant: " + pest_resistants);
 		
 		write("potential pest eaten by parasitoids: " + potential_pests_eaten_by_parasitoids);
 		write("potential pest eaten by predators: " + potential_pests_eaten_by_predators);
@@ -558,6 +558,11 @@ global {
 //		write("potential pest eaten by predators: " + potential_pests_eaten_by_predators[cycle_count]);
 //		write("num_pest_eaten_by_predator: " + num_pest_eaten_by_predator);
 //		write("num_pest_eaten_by_parasitoid: " + num_pest_eaten_by_parasitoid);
+
+		// pest
+		write("pest non resistant: " + pest_non_resistants);
+		write("pest resistant: " + pest_resistants);
+		write("total pests: " + pests_total);
 	}
 	
 	action calc_end_result_and_store {
@@ -731,46 +736,50 @@ species Farmer {
 //	}
 
 	action decision {
-			write("\nWeeks: " + cycle_count + "Farmer on decision");
-			// this calculation isn't related to current treatment
-			ask world {do sequential_var_calc;}
-			
-			if (is_interacted) {
-				do interact_from_participant;
-			} else if (spray = ALL_WEEK) {
-				do spray_all_the_time;
-			} else if (spray = ONLY_1ST_WEEK) {
-				do spray_only_week(1);
-			} else if (spray = ONLY_2ND_WEEK) {
-				do spray_only_week(2);
-			} else if (spray = ONLY_3RD_WEEK){
-				do spray_only_week(3);
-			} else if (spray = ONLY_4TH_WEEK) {
-				do spray_only_week(4);
-			} else if (spray = ONLY_5TH_WEEK) {
-				do spray_only_week(5);
-			} else if (spray = ONLY_6TH_WEEK) {
-				do spray_only_week(6);
-			} else if (spray = ONLY_7TH_WEEK) {
-				do spray_only_week(7);
-			} else if (spray = ONLY_8TH_WEEK) {
-				do spray_only_week(8);
-			} else if (spray = ONLY_9TH_WEEK) {
-				do spray_only_week(9);
-			} else if (spray = ONLY_10TH_WEEK) {
-				do spray_only_week(10);
-			} else if (spray = ONLY_11TH_WEEK) {
-				do spray_only_week(11);
-			} else if (spray = NONE) {
-				do do_not_spray;
+		write("\nWeeks: " + cycle_count + "Farmer on decision");
+		// this calculation isn't related to current treatment
+		ask world {do sequential_var_calc;}
+		
+		if (is_interacted) {
+			do interact_from_participant;
+		} else if (spray = ALL_WEEK) {
+			do spray_all_the_time;
+		} else if (spray = ONLY_1ST_WEEK) {
+			do spray_only_week(1);
+		} else if (spray = ONLY_2ND_WEEK) {
+			do spray_only_week(2);
+		} else if (spray = ONLY_3RD_WEEK){
+			do spray_only_week(3);
+		} else if (spray = ONLY_4TH_WEEK) {
+			do spray_only_week(4);
+		} else if (spray = ONLY_5TH_WEEK) {
+			do spray_only_week(5);
+		} else if (spray = ONLY_6TH_WEEK) {
+			do spray_only_week(6);
+		} else if (spray = ONLY_7TH_WEEK) {
+			do spray_only_week(7);
+		} else if (spray = ONLY_8TH_WEEK) {
+			do spray_only_week(8);
+		} else if (spray = ONLY_9TH_WEEK) {
+			do spray_only_week(9);
+		} else if (spray = ONLY_10TH_WEEK) {
+			do spray_only_week(10);
+		} else if (spray = ONLY_11TH_WEEK) {
+			do spray_only_week(11);
+		} else if (spray = NONE) {
+			do do_not_spray;
+		}
+		
+		do update_pest_on_ui;
+		ask world {do check;}
+		//ask world {do get_total_prev_treatment();}
+		is_farmer_decided <- true;
+		if (sticky_to_removed > 0 and is_grid_clicked) {
+			write("do pause: " + sticky_to_removed);
+			ask world {
+				do pause;
 			}
-			
-			do update_pest_on_ui;
-			//write("treatment list: " + treatments);
-			//do check();
-			ask world {do check;}
-			//ask world {do get_total_prev_treatment();}
-			is_farmer_decided <- true;
+		}
 	}
 	
 	action update_pest_on_ui {
@@ -831,19 +840,6 @@ species Farmer {
 			add confirm ? 1 : 0 to: treatments;
 		}
 	}
-	
-	
-	
-	/*action create_treatment_area(point l){
-		create TreatmentArea {
-			color <-  #transparent;//tet_colors[i];
-			location <- l;//{15,10}
-			shape <- world.select_shape(location);
-			//frequency <- world.freq(level);
-			is_active <- true;
-		}
-	}*/
-	
 
 	
 	reflex stop_experiment when: cycle_count = 13 and !is_batch_experiment { 
@@ -1079,23 +1075,27 @@ experiment Base virtual: true {
 	}
 }
 
-experiment Experiment type: gui parent: Base{
+experiment Experiment type: gui parent: Base {
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- false disables: [spray];
 	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
+	parameter "is grid clicked" category: "Pesticide" var: is_grid_clicked <- false;
 	
 	init {
-		week_pest_come <- 0;
+		
 	}
 	output {
 		display riceField {
-			grid rice_grid;// border: rgba(1,1,1, 0.2);// lines: #black;
+			light #ambient intensity: 150;	
+			//rotation angle: cycle/1000000 dynamic: true;
+			camera #default location: #from_up_front target: {50.0,50.0,50};//40+80*(1-exp(-cycle/50000)
+			grid rice_grid border: rgb(255,255,255,0.1);// border: rgba(1,1,1, 0.2);// lines: #black;
 			//species Farmer;
 			species Pest;
 			species Parasitoid;
 			species Predator;
+			event #mouse_down {ask simulation {do mouse_click_on_grid;}}
 			
-			
-				overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
+			overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
 	            {
 	            	//for each possible type, we draw a square with the corresponding color and we write the name of the type
 	                float y <- 30#px;
@@ -1115,6 +1115,11 @@ experiment Experiment type: gui parent: Base{
 	//                draw square(10#px) at: { 20#px, y } color:IMMUNE_COLOR  border: #white;
 	                draw "Weeks: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
 	                y <- y + 25#px;
+	                
+	                if(is_grid_clicked) {
+	                	draw "sticky removed: " + sticky_to_removed  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+	                	y <- y + 25#px;
+	                }
 	                
 	                // current decision still make decision
 	                //draw "Treatment: " + (treatments[cycle_count] = 1 ? "Yes" : "No")  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
