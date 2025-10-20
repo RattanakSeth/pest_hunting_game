@@ -106,6 +106,7 @@ global {
 	bool is_grid_clicked <- false;
 	int sticky_to_removed <- 0;
 	bool game_is_running <- false; // not use
+	//field cell <- field(300,300);
 	
 	// Experiment variable
 	bool is_interacted <- true;
@@ -1087,17 +1088,6 @@ species Farmer {
 		
 	}
 	
-//	action spray_only_first_week {
-//		if (cycle_count = 0 or cycle_count = 12) {
-//				add 0 to: treatments;
-//		} else if (cycle_count = 1) {
-//			add 1 to: treatments;
-//		} else {
-//			add 0 to: treatments;
-//		}
-//		
-//	}
-	
 	action spray_only_week(int week_num) {
 		if (cycle_count = 0 or cycle_count = 12) {
 			add 0 to: treatments;
@@ -1117,6 +1107,18 @@ species Farmer {
 			write("user confirm: " + confirm);
 			add confirm ? 1 : 0 to: treatments;
 		}
+	}
+	
+	reflex pollution_of_pesticide {
+		// it conflicted with grid remove due to z move
+		//cell <- cell * 0.8;
+//		loop i over: rice_grid {
+//			write("i: " + i.location);
+//			i.location <- i.location + {0,0,1};
+//		}
+	
+		//diffuse the pollutions to neighbor cells
+//		diffuse var: pollution on: rice_grid proportion: 0.9;
 	}
 	
 	action in_between_treatment_decision {
@@ -1220,14 +1222,17 @@ experiment Base virtual: true {
 experiment Experiment type: gui parent: Base{
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- true disables: [spray];
 	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
-	parameter "is grid clicked" category: "Pesticide" var: is_grid_clicked <- false;
+	parameter "is grid clicked" category: "Rice Paddy" var: is_grid_clicked <- false;
+	
+	list<rgb> pal <- palette([ #black, #green, #yellow, #orange, #orange, #red, #red, #red]);
 	output {
 		display riceField {
+			//light #ambient intensity: 128;
 			grid rice_grid border: #lightgray;// lines: #black;
-			species Pest;
-			species Parasitoid;
-			species Predator;
-			species TreatmentArea;
+			//species Pest;
+			//species Parasitoid;
+			//species Predator;
+			//species TreatmentArea;
 			species Farmer;
 			//species HUD;
 			event #mouse_down {ask simulation {do mouse_click_on_grid;}}
@@ -1235,35 +1240,39 @@ experiment Experiment type: gui parent: Base{
 //			event "y" {ask simulation { do decide_to_spray;}}
 //			event "n" {ask simulation { do decide_not_to_spray;}}
 			
-				overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
-	            {
-	            	//for each possible type, we draw a square with the corresponding color and we write the name of the type
-	                float y <- 30#px;
-	
-	                draw square(10#px) at: { 20#px, y } color:PREDATOR_COLOR  border: #white;
-	                draw "Predator " + '(' + length(Predator) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
-	                y <- y + 25#px;
-	                
-	                draw square(10#px) at: { 20#px, y } color:PARASITOID_COLOR  border: #white;
-	                draw "Parasitoid (" + length(Parasitoid) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
-	                y <- y + 25#px;
-	                
-	                draw square(10#px) at: { 20#px, y } color:PEST_COLOR  border: #white;
-	                draw "Pest (" + length(Pest) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
-	                y <- y + 25#px;
-	                
-	//                draw square(10#px) at: { 20#px, y } color:IMMUNE_COLOR  border: #white;
-	                draw "Weeks: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
-	                y <- y + 25#px;
-	                
-	                // current decision still make decision
-	                //draw "Treatment: " + (treatments[cycle_count] = 1 ? "Yes" : "No")  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
-	                //y <- y + 25#px;
-	                if(is_grid_clicked) {
-	                	draw "sticky removed: " + sticky_to_removed  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
-	                	y <- y + 25#px;
-	                }
+			overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
+	        {
+            	//for each possible type, we draw a square with the corresponding color and we write the name of the type
+                float y <- 30#px;
+
+                draw square(10#px) at: { 20#px, y } color:PREDATOR_COLOR  border: #white;
+                draw "Predator " + '(' + length(Predator) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw square(10#px) at: { 20#px, y } color:PARASITOID_COLOR  border: #white;
+                draw "Parasitoid (" + length(Parasitoid) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                draw square(10#px) at: { 20#px, y } color:PEST_COLOR  border: #white;
+                draw "Pest (" + length(Pest) + ')' at: { 40#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+//                draw square(10#px) at: { 20#px, y } color:IMMUNE_COLOR  border: #white;
+                draw "Weeks: " + cycle_count at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                y <- y + 25#px;
+                
+                // current decision still make decision
+                //draw "Treatment: " + (treatments[cycle_count] = 1 ? "Yes" : "No")  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                //y <- y + 25#px;
+                if(is_grid_clicked) {
+                	draw "sticky removed: " + sticky_to_removed  at: { 20#px, y + 4#px } color: #white font: font("Helvetica", 16, #bold);
+                	y <- y + 25#px;
+                }
 			}
+			
+			//display the pollution grid in 3D using triangulation.
+			
+			//mesh rice_grid scale: 9 triangulation: true transparency: 0.4 smooth: 3 above: 0.8 color: pal;
 		
 		}
 		
@@ -1538,19 +1547,12 @@ experiment "Batch None" type: batch keep_seed: true repeat: 1 until: (cycle_coun
 	}
 	
 	reflex end_of_runs
-	{
-		// each simulation of the run is an agent; it is possible to access to the list of these agents by using the variable "simulations" of the experiment. 
-		// Another way of accessing to the simulations consists in using the name of model + _model: here "batch_example_model"
-		//in this example, we ask all the simulation agents of the run to save (at the end of the simulation) the people population in a shapefile with their is_infected and is_immune attributes 
+	{ 
 		ask simulations
 		{	
 			float finalYield <- last (real_yield_in_tons);
 			// initialise value and the end result that we get
 			save [number_of_parasitoid, number_of_predator, finalYield] to: "../results/batch/none_natural_enemies.csv" format:"csv" rewrite: false;
-			write("number of parasitoid: " + number_of_parasitoid);
-			write("number of predator: " + number_of_predator);
-			write("real_yield_in_tons: " + last(real_yield_in_tons));
-			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
 		}
 	}
 }
@@ -1568,19 +1570,12 @@ experiment "Batch every week" type: batch keep_seed: true repeat: 1 until: (cycl
 	}
 	
 	reflex end_of_runs
-	{
-		// each simulation of the run is an agent; it is possible to access to the list of these agents by using the variable "simulations" of the experiment. 
-		// Another way of accessing to the simulations consists in using the name of model + _model: here "batch_example_model"
-		//in this example, we ask all the simulation agents of the run to save (at the end of the simulation) the people population in a shapefile with their is_infected and is_immune attributes 
+	{ 
 		ask simulations
 		{	
 			float finalYield <- last (real_yield_in_tons);
 			// initialise value and the end result that we get
 			save [number_of_parasitoid, number_of_predator, finalYield] to: "../results/batch/every_week_natural_enemies.csv" format:"csv" rewrite: false;
-			write("number of parasitoid: " + number_of_parasitoid);
-			write("number of predator: " + number_of_predator);
-			write("real_yield_in_tons: " + last(real_yield_in_tons));
-			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
 		}
 	}
 }
@@ -1606,9 +1601,6 @@ experiment "Batch once per cycle" type: batch keep_seed: true repeat: 1 until: (
 	
 	reflex end_of_runs
 	{
-		// each simulation of the run is an agent; it is possible to access to the list of these agents by using the variable "simulations" of the experiment. 
-		// Another way of accessing to the simulations consists in using the name of model + _model: here "batch_example_model"
-		//in this example, we ask all the simulation agents of the run to save (at the end of the simulation) the people population in a shapefile with their is_infected and is_immune attributes 
 		ask simulations
 		{	
 			float finalYield <- last (real_yield_in_tons);
@@ -1616,11 +1608,6 @@ experiment "Batch once per cycle" type: batch keep_seed: true repeat: 1 until: (
 			
 			// initialise value and the end result that we get
 			save [number_of_parasitoid, number_of_predator, sprayWeek, finalYield] to: "../results/batch/once_per_yield_natural_enemies.csv" format:"csv" rewrite: false;
-			write("number of parasitoid: " + number_of_parasitoid);
-			write("number of predator: " + number_of_predator);
-			write("spray week: " + spray);
-			write("real_yield_in_tons: " + last(real_yield_in_tons));
-			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
 		}
 	}
 }
@@ -1645,12 +1632,6 @@ experiment "Batch pest arrived" type: batch keep_seed: true repeat: 1 until: (cy
 			
 			// initialise value and the end result that we get
 			save [number_of_parasitoid, number_of_predator, sprayWeek, week_pest_come, finalYield] to: "../results/batch/week_pest_come_natural_enemies.csv" format:"csv" rewrite: false;
-			write("number of parasitoid: " + number_of_parasitoid);
-			write("number of predator: " + number_of_predator);
-			write("spray week: " + spray);
-			write("Week pest come: " + week_pest_come);
-			write("real_yield_in_tons: " + last(real_yield_in_tons));
-			//save [predators,parasitoids] to: "Results/natural_enemies.csv" format:"csv" rewrite:false;
 		}
 	}
 }
