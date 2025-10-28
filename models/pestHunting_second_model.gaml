@@ -117,12 +117,7 @@ global {
 	//bool 
 //	geometry shape <- rectangle(20,30);
 	init {
-		create Pest  number: number_of_pest {
-//			current_cell <- one_of(rice_grid);
-//			location <- current_cell.location;
-//			current_cell.is_free <- false;
-
-		}
+		create Pest  number: number_of_pest;
 		
 		create Parasitoid number: number_of_parasitoid {
 		}
@@ -192,7 +187,7 @@ global {
 
 		string calc_file <-"../results/calc.csv"; 
 		if file_exists(calc_file){ 
-			write "File exists in the computer";
+			write "File calc.csv exists in the computer";
 			bool delete_file_ok <- delete_file(calc_file);
             write "Deleted file: " + delete_file_ok;
 		}
@@ -218,8 +213,8 @@ global {
 			float realYield <- real_yield_in_tons[i] with_precision 2;
 			int treatment <- treatments[i];
 			float maxDynamicYield <- max_dynamic_yields[i] with_precision 7;
+			//write("predator: " + predators[i]);
 			
-			// test
 			float stickyToRemove <- remove_sticky_notes[i] with_precision 2;
 			
 			save [cycles, pest_total, pestResistant, pestNonResistant, potentialParasitoid, 
@@ -605,7 +600,8 @@ global {
 	
 	
 	action check {
-		/*write("treatments: " + treatments);
+		/*
+		write("treatments: " + treatments);
 		// predator
 		write("predator each cycle_count: " + predators);
 		write("potential predator: " + potential_predators);
@@ -656,7 +652,7 @@ global {
 		if file_exists(crop_yeild_path){ 
 			write "File exists in the computer";
 			bool delete_file_ok <- delete_file(crop_yeild_path);
-            write "Deleted file: " + delete_file_ok;
+            write "Deleted file (crop_yield): " + delete_file_ok;
 		}
 		
 		save [stickyNoteRemaining, cellRemaining, finalYield] to: crop_yeild_path format: "csv" rewrite: false;
@@ -674,7 +670,7 @@ global {
 		//write("sticky note round: " + sticky_note_round);
 		
 		if (sticky_note_round < round(sticky_with_precision)) {
-			// we remove over 1 amount which should added one
+			// we remove over 1 amount so, we should added. This over of removing due to precision and round
 			int add_amount <- round(sticky_with_precision) - sticky_note_round;
 			write("amount need to add: " + add_amount);
 			if (add_amount <= 3) {
@@ -686,12 +682,6 @@ global {
 				}
 			}
 		}
-	}
-	
-	geometry select_shape(point l) {
-		//write(l);
-		// TODO: edit this as a dynamic grid
-		return rectangle({l.x - 5, l.y - 5}, {l.x + 5, l.y + 5});
 	}
 	
 	// interactio part
@@ -760,9 +750,6 @@ global {
 }
 
 grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8 { // good to go with 30 x 30
-//	rgb color <- #blue;
-//	float carrying_capacity;
-//	float biomass;
 	rgb color <- #green;
 	float cell_value min: 0.0 max: 3.0 <- 3.0;
 	bool is_free <- true;
@@ -797,12 +784,6 @@ grid rice_grid width: rice_field_width height: rice_field_height neighbors: 8 { 
 		}
 	}
 	
-}
-
-species RiceCrop {
-	// use it in the gird represent as rice on grid
-	int value ;//min: 0 max: 3;// <- 3; // three crop per sigle grid
-	//list<int> treatments <- [0,0,0,0,0,0,0,0,0,0,0,0,0];
 }
 
 species Insect {
@@ -938,65 +919,6 @@ species Predator parent: Insect {
 	}
 }
 
-species HUD skills:[thread]{
-	
-	font hud_font <- font("Helvetica", 80, #bold) ;
-	int count <- 3;
-	bool is_counting <- false;
-	
-	aspect default {
-		if is_counting {
-			draw ""+count at:{world.shape.width/2-1, world.shape.height/2-1} 
-							color: rnd_color(255) 
-							font:hud_font ;
-		}
-		else if ! game_is_running{
-			draw "click on grid"at:{1, 10}  font:hud_font color:#red;
-			draw "to remove rice layer" at:{2, 20}  font:hud_font color:#red;
-		}
-	}
-	
-	action start_count_down {
-		count <- 3;
-		is_counting <- true;
-		
-		do run_thread interval:1#second;
-	}
-	
-	//counting down
-	action thread_action {
-		count <- count - 1;
-		if count = 0 {
-			do end_thread;
-			is_counting <- false;
-			ask world {
-				game_is_running <- true;
-			}
-		}
-	}
-	
-	
-}
-
-// didn't use
-species TreatmentArea {
-	// This a shape of drawing while farmer decide to spray
-	int i;
-	bool is_active;
-	float frequency;
-	rgb color;
-	
-	//point center_rotate;
-	
-	
-	aspect default {
-		draw shape color:color border:#red at: location size: 5;
-		//draw circle(0.3) at:center_rotate color:#red;
-		//draw shape color:color border: #red;
-	}
-	
-}
-
 species Farmer {
 	
 	init {
@@ -1008,12 +930,6 @@ species Farmer {
 			// this calculation isn't related to current treatment
 			ask world {do sequential_var_calc;}
 			// apply treatment
-			/*if (cycle_count = 0 or cycle_count = 12) {
-				add 0 to: treatments;
-			} else {
-				add 1 to: treatments;
-				//do in_between_treatment_decision;
-			}*/
 			
 			if (is_interacted) {
 				do interact_from_participant;
@@ -1110,90 +1026,17 @@ species Farmer {
 	}
 	
 	reflex pollution_of_pesticide {
-		// it conflicted with grid remove due to z move
-		//cell <- cell * 0.8;
-//		loop i over: rice_grid {
-//			write("i: " + i.location);
-//			i.location <- i.location + {0,0,1};
-//		}
-	
-		//diffuse the pollutions to neighbor cells
-//		diffuse var: pollution on: rice_grid proportion: 0.9;
+
 	}
 	
-	action in_between_treatment_decision {
-		list<rice_grid> rnd_grids <- get_fields_for_treatment();
-		//add rnd_grids to: treatment_areas;
-		//list<pair<string, int>> insect_list <- []; // list of insect here
-		//write("random cell: " + length(rnd_grids));
-		loop rc over: rnd_grids {
-			//write("random grid: " + rnd_grids[i]);
-			//rice_grid rg <- rice_grid grid_at rnd_grids[i];
-			//do create_treatment_area(rc.location);
-			list<Insect> insect_on_grid <- rc.get_insects_inside();
-			insect_on_grid <- insect_on_grid where (each!=nil); // remove nil
-			insect_on_grid >>- 0; // remove nill from list
-			//insect_on_grid <- remove nill from: insect_on_grid;
-			write("insect inside grid: " + insect_on_grid);
-			ask rc {
-				put 1 in: self.treatments at: cycle_count;
-			}
-			// TODO: each grid store data and compute only treatment area
-		}
-	}
 	
-	/*action create_treatment_area(point l){
-		create TreatmentArea {
-			color <-  #transparent;//tet_colors[i];
-			location <- l;//{15,10}
-			shape <- world.select_shape(location);
-			//frequency <- world.freq(level);
-			is_active <- true;
-		}
-	}*/
-	
-	list<rice_grid> get_fields_for_treatment{
-		/* 
-		 * This choosing rice fields base on the behavior of the farmer 
-		 * They will have different choices
-		 * Place to spray will be chosen where the insect in stay on
-		 * 10 grids have been selected
-		 */
-		int target_grid <- 10;
-		rice_grid rnd_one_field <- one_of(rice_grid where (!each.is_free));
-		list<rice_grid> rice_cell <- rnd_one_field.neighbors;
-		add rnd_one_field to: rice_cell;
-		//rice_cell <- rice_cell sort_by each;
-		
-		//write("rice cell: " + length(rice_cell));
-		int remainingCell <- target_grid - length(rice_cell);
-		if (remainingCell != 0) {
-			// need to select more
-			loop while: (length(rice_cell) < target_grid) {
-				write("loop take other grid");
-				list<rice_grid> neighbor_of_neighbor <- one_of(rnd_one_field.neighbors).neighbors;
-				rice_cell <- rice_cell union neighbor_of_neighbor;
-				if (length(rice_cell) > 10) {
-					//write("limit cell");
-					rice_cell <- (rice_cell sort_by each);
-					rice_cell <- rice_cell[0::10];
-					//write("rice cell size: " + length(rice_cell));
-//					rice_cell <- rice_cell sublist 0 number: 10;
-				}
-			}
-			//write("rice cell: " + rice_cell);
-		}
-		
-		return rice_cell;
-	}
-	
-	reflex stop_experiment when: cycle_count >= 12 and !is_batch_experiment { 
+	reflex stop_experiment when: cycle_count = 12 and !is_batch_experiment { 
 		write("Rice harvested, stop experiment.");
 		ask world {
 			do store_data_to_csv;
 			do storeBPH;
 			do calc_end_result_and_store;
-	   		do pause;
+			do pause;
    		}
    		
 	}
@@ -1224,21 +1067,15 @@ experiment Experiment type: gui parent: Base{
 	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
 	parameter "is grid clicked" category: "Rice Paddy" var: is_grid_clicked <- false;
 	
-	list<rgb> pal <- palette([ #black, #green, #yellow, #orange, #orange, #red, #red, #red]);
 	output {
 		display riceField {
-			//light #ambient intensity: 128;
 			grid rice_grid border: #lightgray;// lines: #black;
-			//species Pest;
-			//species Parasitoid;
-			//species Predator;
-			//species TreatmentArea;
+			species Pest;
+			species Parasitoid;
+			species Predator;
 			species Farmer;
-			//species HUD;
+			
 			event #mouse_down {ask simulation {do mouse_click_on_grid;}}
-			// TODO: initialise to ask params and change for experiment
-//			event "y" {ask simulation { do decide_to_spray;}}
-//			event "n" {ask simulation { do decide_not_to_spray;}}
 			
 			overlay position: { 5, 5 } size: { 180 #px, 140 #px } background: # black transparency: 0.5 border: #black rounded: true
 	        {
@@ -1320,7 +1157,6 @@ experiment "No Treatment" type: gui parent: Base {
 			species Pest;
 			species Parasitoid;
 			species Predator;
-			species TreatmentArea;
 			species Farmer;
 			
 //			species ExperimentFarmerNoTreatment;
@@ -1376,6 +1212,10 @@ experiment "Treatment All" parent: Base{
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- false read_only: true;
 	parameter "Spary decision" category:"Pesticide" var: spray <- ALL_WEEK read_only: true;
 	
+	init {
+		is_interacted <- false;
+	}
+	
 	output {
 		layout #split editors: false;
 		display riceField {
@@ -1383,7 +1223,6 @@ experiment "Treatment All" parent: Base{
 			species Pest;
 			species Parasitoid;
 			species Predator;
-			species TreatmentArea;
 			species Farmer;
 //			species ExperimentFarmerNoTreatment;
 			
@@ -1442,7 +1281,6 @@ experiment "Only 1st Week" parent: Base {
 			species Pest;
 			species Parasitoid;
 			species Predator;
-			species TreatmentArea;
 			species Farmer;
 //			species ExperimentFarmerNoTreatment;
 		}
@@ -1495,7 +1333,6 @@ experiment "Run 4 Simulations" parent: Base {
 			species Pest;
 			species Parasitoid;
 			species Predator;
-			species TreatmentArea;
 			species Farmer;
 			
 			overlay position: { 5, 5 } size: { 180 #px, 150 #px } background: # black transparency: 0.5 border: #black rounded: true
