@@ -12,9 +12,9 @@ Adding from only formula in MS Excel, it was implemented as an agent-based model
 - is grid clicked: this is only if participant would like to remove lost of rice sticky note by using mouse click on grid. It will remove one layer of sticky note until sticky notes equals zero and then it continues to the next week. If you're lazy to click on grid to remove just change it to false.
 - number of parasitoid: it is the population of parasitoid in rice paddy
 - number of predator: it is the population of predator in rice paddy with default value 7
-- week of pest come: it is the week that pest arrived to the rice field. Value can be change ranging from week 0 until last week of rice cycle. The population of pest code will default 200 pests that 1% of them are pest resistant.
+- week of pest come: it is the week that pest arrived to the rice field. Value can be change ranging from week 0 until last week of rice cycle. The population of pest come will default 200 pests that 1% of them are pest resistant.
 
-Model 2.1 is an improvement model 2 which replaced the movement of insect and eating of them by hunting and fleeing. Natural enemies will hunt the pests in case the see them in the perception radius 1.0. Likewise, pests will flee if the see the natural enemies within the perception radius.
+Model 2.1 is an improvement model 2 which replaced the movement of insect and eating of them by hunting and fleeing. Natural enemies will hunt the pests in case they see them in the perception radius 1.0. Likewise, pests will flee if they see the natural enemies within the perception radius.
 
 For batch simulation, it consists of batch none, batch every week, batch once per cycle, and batch pest arrived. The 'Batch None' scenario uses two variables: natural enemies and no treatment, to assess crop yield. Batch every week is a corelation between spray every week and natural enemies. Batch once per cycle is a corelation between natural enemy and spray once per rice yield. Lastly, batch pest arrived is a corelation between week the pest come, number of natural enemy and spray decision.
 

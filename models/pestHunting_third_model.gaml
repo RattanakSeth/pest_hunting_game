@@ -38,7 +38,7 @@ global {
 	//	float max_carrying_capacity <- 10.0;
 	int number_of_pest <- 0; // first step should be 0
 
-	float step <-  1 #day;//1#week; from 2 days up, it's accurate (insect will only move inside a grid)
+	float step <-  1 #week;//1#week; from 2 days up, it's accurate (insect will only move inside a grid)
 	geometry shape <- square(2000);
 	float step_count <- 0.0;
 	int day <- 0;
@@ -145,14 +145,10 @@ global {
 				if (decision = ONCE_PER_CYCLE) {
 					int rnd_choice <- rnd_choice(TREATMENT_ONCE_A_CYLE_OPTION.keys);
 					once_per_cycle <- map<int,string>(TREATMENT_ONCE_A_CYLE_OPTION.pairs where(each.key = rnd_choice));
-				}
-				
-				if (decision = ONCE_PER_CYCLE) {
-					add once_per_cycle to: behaviour_list;
+					//add once_per_cycle to: behaviour_list;
 				} else {
 					add decision to: behaviour_list;
-				}
-					
+				}	
 				
 				write("farmer " + id + " :" + decision + (decision = ONCE_PER_CYCLE ? " " + once_per_cycle.pairs: ""));
 			}
@@ -1102,53 +1098,53 @@ experiment Ex parent: Base{
 //			species rice_grid;
 		}
 		
-		//TODO: check next
-		display plots type: 2d refresh:every(per_cycle_count#cycles){
+		//TODO: checking
+		display "Yield Plots" type: 2d refresh:every(per_cycle_count#cycles){
 				
-				chart "Crop Yield Rice Paddy 0: ID" + RicePaddy[0].id + (RicePaddy[0].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[0].farmer.decision + " " + RicePaddy[0].farmer.once_per_cycle.keys:  RicePaddy[0].farmer.decision)  size: {0.5,0.5} position: {0,0} type: series {
+				chart "Crop yield field 0: ID " + RicePaddy[0].id + (RicePaddy[0].farmer.decision = ONCE_PER_CYCLE ? " week " + RicePaddy[0].farmer.once_per_cycle.keys[0]:  " " + RicePaddy[0].farmer.decision)  size: {0.5,0.5} position: {0,0} type: series {
 				    data "Real Yield (tons)" value: RicePaddy[0].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: RicePaddy[0].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}
 				
-				chart "Crop Yield Rice Paddy 1: ID" + RicePaddy[1].id + (RicePaddy[1].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[1].farmer.decision + " " + RicePaddy[1].farmer.once_per_cycle.keys:  RicePaddy[1].farmer.decision)  size: {0.5,0.5} position: {0.5,0} type: series {
+				chart "Crop yield field 1: ID " + RicePaddy[1].id + (RicePaddy[1].farmer.decision = ONCE_PER_CYCLE ? " week " + RicePaddy[1].farmer.once_per_cycle.keys[0]:  " " + RicePaddy[1].farmer.decision)  size: {0.5,0.5} position: {0.5,0} type: series {
 				    data "Real Yield (tons)" value: RicePaddy[1].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: RicePaddy[1].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}
 				
-				chart "Crop Yield Rice Paddy 2: ID" + RicePaddy[2].id + (RicePaddy[2].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[2].farmer.decision + " " + RicePaddy[2].farmer.once_per_cycle.keys:  RicePaddy[2].farmer.decision)  size: {0.5,0.5} position: {0,0.5} type: series {
+				chart "Crop yield field 2: ID " + RicePaddy[2].id + (RicePaddy[2].farmer.decision = ONCE_PER_CYCLE ? " week " + RicePaddy[2].farmer.once_per_cycle.keys[0]:  " " + RicePaddy[2].farmer.decision)  size: {0.5,0.5} position: {0,0.5} type: series {
 				    data "Real Yield (tons)" value: RicePaddy[2].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: RicePaddy[2].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}
 				
-				chart "Crop Yield Rice Paddy 3: ID" + RicePaddy[3].id + (RicePaddy[3].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[1].farmer.decision + " " + RicePaddy[3].farmer.once_per_cycle.keys:  RicePaddy[3].farmer.decision)  size: {0.5,0.5} position: {0.5,0.5} type: series {
+				chart "Crop yield field 3: ID " + RicePaddy[3].id + (RicePaddy[3].farmer.decision = ONCE_PER_CYCLE ? " week " + RicePaddy[3].farmer.once_per_cycle.keys[0]:  " " + RicePaddy[3].farmer.decision)  size: {0.5,0.5} position: {0.5,0.5} type: series {
 				    data "Real Yield (tons)" value: RicePaddy[3].real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: RicePaddy[3].max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}
 		}
 		
-		display insectPlot type: 2d refresh: every(per_cycle_count#cycles) {
-			chart "Population Dynamics paddy 0: ID" + RicePaddy[0].id + (RicePaddy[0].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[0].farmer.decision + " " + RicePaddy[0].farmer.once_per_cycle.keys:  RicePaddy[0].farmer.decision)  size: {0.5,0.5} position: {0,0} type: series {
+		display "Insect Plot" type: 2d refresh: every(per_cycle_count#cycles) {
+			chart "Population field 0: ID " + RicePaddy[0].id + (RicePaddy[0].farmer.decision = ONCE_PER_CYCLE ?  " week " + RicePaddy[0].farmer.once_per_cycle.keys[0]:  " " + RicePaddy[0].farmer.decision)  size: {0.5,0.5} position: {0,0} type: series {
 				    data "Pest" value: length(RicePaddy[0].lstPest where(!dead(each))) color: PEST_COLOR;
 				    data "Parasitoid" value: length(RicePaddy[0].lstParasitoid where(!dead(each))) color: PARASITOID_COLOR;
 				    data "Predator" value: length(RicePaddy[0].lstPredator where(!dead(each))) color: PREDATOR_COLOR;
 				    data "Treatment" value: (RicePaddy[0].treatments[cycle_count] = 1 ? RicePaddy[0].treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
 			}
 			
-			chart "Population Dynamics paddy 1: ID" + RicePaddy[1].id + (RicePaddy[1].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[1].farmer.decision + " " + RicePaddy[1].farmer.once_per_cycle.keys:  RicePaddy[1].farmer.decision)  size: {0.5,0.5} position: {0.5,0} type: series {
+			chart "Population field 1: ID " + RicePaddy[1].id + (RicePaddy[1].farmer.decision = ONCE_PER_CYCLE ?  " week " + RicePaddy[1].farmer.once_per_cycle.keys[0]: " " + RicePaddy[1].farmer.decision)  size: {0.5,0.5} position: {0.5,0} type: series {
 				    data "Pest" value: length(RicePaddy[1].lstPest where(!dead(each))) color: PEST_COLOR;
 				    data "Parasitoid" value: length(RicePaddy[1].lstParasitoid where(!dead(each))) color: PARASITOID_COLOR;
 				    data "Predator" value: length(RicePaddy[1].lstPredator where(!dead(each))) color: PREDATOR_COLOR;
 				    data "Treatment" value: (RicePaddy[1].treatments[cycle_count] = 1 ? RicePaddy[1].treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
 			}
 			
-			chart "Population Dynamics paddy 2: ID" + RicePaddy[2].id + (RicePaddy[2].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[2].farmer.decision + " " + RicePaddy[2].farmer.once_per_cycle.keys:  RicePaddy[2].farmer.decision)  size: {0.5,0.5} position: {0,0.5} type: series {
+			chart "Population field 2: ID " + RicePaddy[2].id + (RicePaddy[2].farmer.decision = ONCE_PER_CYCLE ? " week " + RicePaddy[2].farmer.once_per_cycle.keys[0]:  " " + RicePaddy[2].farmer.decision)  size: {0.5,0.5} position: {0,0.5} type: series {
 				    data "Pest" value: length(RicePaddy[2].lstPest where(!dead(each))) color: PEST_COLOR;
 				    data "Parasitoid" value: length(RicePaddy[2].lstParasitoid where(!dead(each))) color: PARASITOID_COLOR;
 				    data "Predator" value: length(RicePaddy[2].lstPredator where(!dead(each))) color: PREDATOR_COLOR;
 				    data "Treatment" value: (RicePaddy[2].treatments[cycle_count] = 1 ? RicePaddy[2].treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
 			}
 			
-			chart "Population Dynamics paddy 3: ID" + RicePaddy[3].id + (RicePaddy[3].farmer.decision = ONCE_PER_CYCLE ?  RicePaddy[3].farmer.decision + " " + RicePaddy[3].farmer.once_per_cycle.keys:  RicePaddy[3].farmer.decision)  size: {0.5,0.5} position: {0.5,0.5} type: series {
+			chart "Population field 3: ID " + RicePaddy[3].id + (RicePaddy[3].farmer.decision = ONCE_PER_CYCLE ? " week " + RicePaddy[3].farmer.once_per_cycle.keys[0]: " " + RicePaddy[3].farmer.decision)  size: {0.5,0.5} position: {0.5,0.5} type: series {
 				    data "Pest" value: length(RicePaddy[3].lstPest where(!dead(each))) color: PEST_COLOR;
 				    data "Parasitoid" value: length(RicePaddy[3].lstParasitoid where(!dead(each))) color: PARASITOID_COLOR;
 				    data "Predator" value: length(RicePaddy[3].lstPredator where(!dead(each))) color: PREDATOR_COLOR;
