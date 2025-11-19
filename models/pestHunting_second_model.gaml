@@ -30,6 +30,7 @@ global {
 	string ONLY_9TH_WEEK const: true <- 'Only 9th week';
 	string ONLY_10TH_WEEK const: true <- 'Only 10th week';
 	string ONLY_11TH_WEEK const: true <- 'Only 11th week';
+	string TWICE_TREATMENT const: true <- 'Twice treatment';
 	
 	
 	//	float max_carrying_capacity <- 10.0;
@@ -114,6 +115,14 @@ global {
 	bool is_batch_experiment <- false;
 	string spray <- ONLY_2ND_WEEK;
 	
+	// Batch expirement
+	list<int> week_to_spray <- [1,2,3,4,5,6,7,8,9,10,11];
+	int f_spray <- 2;
+	int s_spray <- 4;
+	list<int> weeks <- range(1, 12);
+	list<list> alternatives <- [];
+	list alternative;
+	
 	//bool 
 //	geometry shape <- rectangle(20,30);
 	init {
@@ -130,6 +139,20 @@ global {
 		// initial variable
 		do initialise_variable;
 		//write("cycle: " + cycle);
+		
+		// initial treatment
+		do alternative_twice_treatment;
+		//write("alternative: " + alternatives);
+	}
+	
+	action alternative_twice_treatment {
+		loop first over: weeks {
+			loop second over: weeks {
+				if (first < second) {
+					add [first, second] to: alternatives;
+				}
+			}
+		}
 	}
 	
 	action initialise_variable {
@@ -147,7 +170,10 @@ global {
 		//add [] to: treatment_areas;
 		
 		// UI
-		do display_how_to_play;
+		if (!is_batch_experiment) {
+			do display_how_to_play; 
+		}
+		
 	}
 	
 	action display_how_to_play {
@@ -959,6 +985,8 @@ species Farmer {
 				do spray_only_week(11);
 			} else if (spray = NONE) {
 				do do_not_spray;
+			} else if (spray = TWICE_TREATMENT) {
+				do apply_treatment_twice([f_spray, s_spray]);
 			}
 			
 			//do action: sequential_var_calc;
@@ -977,8 +1005,22 @@ species Farmer {
 			}
 	}
 	
+	action apply_treatment_twice(list<int> _sprays) {
+		bool is_matched <- false;
+		loop week over: _sprays {
+			if (week = cycle_count) {
+				add 1 to: treatments;
+				is_matched <- true;
+			}
+		}
+		
+		if (!is_matched) {
+			add 0 to: treatments;
+		}
+	}
+	
 	action update_pest_on_ui {
-		write("pest on ui: " + length(Pest));
+		//write("pest on ui: " + length(Pest));
 		//write("pest var: " + pests_total);
 		if (length(Pest) < pests_total[cycle_count]) {
 			// udpdate ui pest due to eating of natural enemies
@@ -1064,8 +1106,9 @@ experiment Base virtual: true {
 
 experiment Experiment type: gui parent: Base{
 	parameter "Interactive" category:"Pesticide" var: is_interacted <- true disables: [spray];
-	parameter "Spray decision" category:"Pesticide" var: spray <- NONE among:[NONE,ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
+	parameter "Spray decision" category:"Pesticide" var: spray <- TWICE_TREATMENT among:[NONE,ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK, TWICE_TREATMENT] enables: [alternative];
 	parameter "is grid clicked" category: "Rice Paddy" var: is_grid_clicked <- false;
+//	parameter "Twice treatment" category: "Pesticide" var: alternative <- [];
 	
 	output {
 		display riceField {
@@ -1452,7 +1495,7 @@ experiment "Batch once per cycle" type: batch keep_seed: true repeat: 1 until: (
 experiment "Batch pest arrived" type: batch keep_seed: true repeat: 1 until: (cycle_count = 13) {
 	parameter "Number of parasitoid" category: "Insect" var: number_of_parasitoid min: 0 max: 40 step: 5; // 25
 	parameter "Number of predator" category: "Insect" var: number_of_predator min: 0 max: 30 step: 5; // 7
-	parameter "Spray" category: "Pesticide" var: spray among: [NONE, ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK];
+	parameter "Spray" category: "Pesticide" var: spray among: [NONE, ALL_WEEK, ONLY_1ST_WEEK, ONLY_2ND_WEEK, ONLY_3RD_WEEK, ONLY_4TH_WEEK, ONLY_5TH_WEEK, ONLY_6TH_WEEK, ONLY_7TH_WEEK, ONLY_8TH_WEEK, ONLY_9TH_WEEK, ONLY_10TH_WEEK, ONLY_11TH_WEEK, TWICE_TREATMENT];
 	parameter "Week of pest come" category: "Insect" var: week_pest_come min: 1 max: 12 step: 1;
 	
 	init {
@@ -1469,6 +1512,27 @@ experiment "Batch pest arrived" type: batch keep_seed: true repeat: 1 until: (cy
 			
 			// initialise value and the end result that we get
 			save [number_of_parasitoid, number_of_predator, sprayWeek, week_pest_come, finalYield] to: "../results/batch/week_pest_come_natural_enemies.csv" format:"csv" rewrite: false;
+		}
+	}
+}
+
+experiment "Batch Twice Treatment" type: batch keep_seed: true repeat: 1 until: (cycle_count = 13) {
+	parameter "First Spray" var: f_spray among: [1,2] min: 1 max: 2 step: 1;
+	parameter "Second Spray" var: s_spray among: [3,4,5,6,7,8,9,10,11] min: 3 max: 11 step: 1;
+	
+	init {
+		is_interacted <- false;
+		is_batch_experiment <- true;
+		spray <- TWICE_TREATMENT;
+	}
+	
+	reflex end_of_runs {
+		ask simulations {
+			float finalYield <- last(real_yield_in_tons) with_precision 2;
+			int firstDecision <- f_spray;
+			int secondDecision <- s_spray;
+			
+			save [firstDecision, secondDecision, finalYield] to: "../results/batch/twice_treatment.csv" format:"csv" rewrite: false;
 		}
 	}
 }
