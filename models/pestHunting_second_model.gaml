@@ -123,7 +123,7 @@ global {
 	list<int> weeks <- range(1, 12);
 	map<point, string> alternatives;
 	list<string> alternative_tstr <- ['F1-S2','F1-S3','F1-S4','F1-S5','F1-S6','F1-S7','F1-S8','F1-S9','F1-S10','F1-S11','F1-S12','F2-S3','F2-S4','F2-S5','F2-S6','F2-S7','F2-S8','F2-S9','F2-S10','F2-S11','F2-S12','F3-S4','F3-S5','F3-S6','F3-S7','F3-S8','F3-S9','F3-S10','F3-S11','F3-S12','F4-S5','F4-S6','F4-S7','F4-S8','F4-S9','F4-S10','F4-S11','F4-S12','F5-S6','F5-S7','F5-S8','F5-S9','F5-S10','F5-S11','F5-S12','F6-S7','F6-S8','F6-S9','F6-S10','F6-S11','F6-S12','F7-S8','F7-S9','F7-S10','F7-S11','F7-S12','F8-S9','F8-S10','F8-S11','F8-S12','F9-S10','F9-S11','F9-S12','F10-S11','F10-S12','F11-S12'];
-	string opt_alternative;
+	string opt_alternative <- 'F1-S2';
 	//map<list<int, int>, string> alternative;
 	//map<int, string> test <- [1::'one', 2::'two'];
 	
@@ -143,7 +143,7 @@ global {
 		//write("cycle: " + cycle);
 		
 		// initial treatment
-		//do alternative_twice_treatment;
+		do alternative_twice_treatment;
 	}
 	
 	action alternative_twice_treatment {
@@ -151,11 +151,11 @@ global {
 			loop second over: weeks {
 				if (first < second) {
 					add ({first, second}::'F' + first + '-S' + second) to: alternatives;
-					add 'F' + first + '-S' + second to: alternative_tstr;
+					//add 'F' + first + '-S' + second to: alternative_tstr;
 				}
 			}
 		}
-		write("alternative: " + alternative_tstr);
+		//write("alternative: " + alternative_tstr);
 	}
 	
 	action initialise_variable {
@@ -1118,9 +1118,7 @@ experiment Experiment type: gui parent: Base{
 	parameter "Twice treatment" category: "Pesticide" var: opt_alternative <- 'F1-S2' among: alternative_tstr ;//enables: [spray];
 	
 	init {
-		ask world {
-			do alternative_twice_treatment;
-		}
+		
 	}
 	
 	output {
@@ -1459,7 +1457,7 @@ experiment "Batch every week" type: batch keep_seed: true repeat: 1 until: (cycl
 		is_interacted <- false;
 		is_batch_experiment <- true;
 		spray <- ALL_WEEK;
-		write("is_interacted: " + is_interacted);
+		//write("is_interacted: " + is_interacted);
 	}
 	
 	reflex end_of_runs
@@ -1530,22 +1528,27 @@ experiment "Batch pest arrived" type: batch keep_seed: true repeat: 1 until: (cy
 }
 
 experiment "Batch Twice Treatment" type: batch keep_seed: true repeat: 1 until: (cycle_count = 13) {
-	parameter "First Spray" var: f_spray among: [1,2] min: 1 max: 2 step: 1;
-	parameter "Second Spray" var: s_spray among: [3,4,5,6,7,8,9,10,11] min: 3 max: 11 step: 1;
+	int idx <- 0;
+	
+	//parameter "First Spray" var: f_spray among: [1,2] min: 1 max: 2 step: 1;
+	//parameter "Second Spray" var: s_spray among: [3,4,5,6,7,8,9,10,11] min: 3 max: 11 step: 1;
+	parameter "Twice treatment" var: opt_alternative among: alternative_tstr;
 	
 	init {
 		is_interacted <- false;
 		is_batch_experiment <- true;
 		spray <- TWICE_TREATMENT;
+		
 	}
 	
 	reflex end_of_runs {
 		ask simulations {
 			float finalYield <- last(real_yield_in_tons) with_precision 2;
+			myself.idx <- myself.idx + 1;
 			int firstDecision <- f_spray;
 			int secondDecision <- s_spray;
 			
-			save [firstDecision, secondDecision, finalYield] to: "../results/batch/twice_treatment.csv" format:"csv" rewrite: false;
+			save [myself.idx, firstDecision, secondDecision, finalYield] to: "../results/batch/twice_treatment.csv" format:"csv" rewrite: false;
 		}
 	}
 }
