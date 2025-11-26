@@ -116,6 +116,7 @@ global {
 	string spray <- ONLY_2ND_WEEK;
 	
 	// Batch expirement
+	// t: twice treatment
 	list<int> week_to_spray <- [1,2,3,4,5,6,7,8,9,10,11];
 	int f_spray <- 2;
 	int s_spray <- 4;
@@ -126,9 +127,6 @@ global {
 	//map<list<int, int>, string> alternative;
 	//map<int, string> test <- [1::'one', 2::'two'];
 	
-	
-	//bool 
-//	geometry shape <- rectangle(20,30);
 	init {
 		create Pest  number: number_of_pest;
 		
