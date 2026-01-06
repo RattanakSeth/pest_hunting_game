@@ -1,5 +1,8 @@
-results/*
-**/results/*
+results/paddyField/*
+insects/results/*
 models/snapshots/*
 includes/soctrang/*
 models/insects/results/*
+results/BPH.csv
+results/calc.csv
+results/crop_yield.csv

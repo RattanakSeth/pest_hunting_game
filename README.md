@@ -1,6 +1,9 @@
 # Pest Hunting Game
 ### Topic: Modelling insect interactions in rice crops on the GAMA platform as a basis for educational VR games
-- Authors: Rattanak Seth, Lucile Delatouche, Mathilde Sester, Alexis Drogoul, Sovuthy Cheab
+Authors: Rattanak Seth, Lucile Delatouche, Mathilde Sester, Alexis Drogoul, Sovuthy Cheab <br>
+<br/>
+<b>Cite us (IEEE format)</b>: R. Seth, L. Delatouche, M. Sester, A. Drogoul, and S. Cheab, “Modelling insect interactions in rice crops on the GAMA platform as a basis for educational VR games,” in ASEAN Conference on Emerging Technology 2025, Cambodia Academy of Digital Technology (CADT): Rattanak Seth, Nov. 2015, pp. 103–113. Available: https://www.idri.edu.kh/wp-content/uploads/2025/12/ACET-2025_Proceedings.pdf
+
 ---
 ## First model - PestHunting.gaml
 Building model based on game which was implemented on the Microsoft Excel by expert in the field. It was coded in Gama platform and stick to the excel formula. Before building it, it should draw class diagram, variable relation, and understand the formula in MS Excel.

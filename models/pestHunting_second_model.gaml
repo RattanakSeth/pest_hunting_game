@@ -155,7 +155,7 @@ global {
 				}
 			}
 		}
-		//write("alternative: " + alternative_tstr);
+		write("alternative size: " + length(alternative_tstr));
 	}
 	
 	action initialise_variable {
@@ -1169,7 +1169,7 @@ experiment Experiment type: gui parent: Base{
 		
 		// every 28 cycles equal to one cycle count ( a week)
 		display plots type: 2d refresh:every(per_cycle_count#cycles){
-				chart "Population Dynamics" size: {1,0.5} position: {0,0} type: series {
+				chart "(a) Population dynamics" size: {1,0.5} position: {0,0} type: series {
 				    data "Total Pest" value: length(Pest) color: PEST_COLOR;
 				    data "Pest resistance" value: pest_resistants[cycle_count] color: #yellow;
 				    data "Parasitoid" value: length(Parasitoid) color: PARASITOID_COLOR;
@@ -1177,7 +1177,7 @@ experiment Experiment type: gui parent: Base{
 				    data "Treatment" value: (treatments[cycle_count] = 1 ? treatments[cycle_count] * 50 : nil) color: #blue style: dot; // display dot as a treatment in value 50
 				}
 				
-				chart "Crop Yield" size: {1,0.5} position: {0,0.5} type: series {
+				chart "(b) Crop yield" size: {1,0.5} position: {0,0.5} type: series {
 				    data "Real Yield (tons)" value: real_yield_in_tons[cycle_count] color: #lightblue;//[cycle_count, length(Pest)] color: #red;
 				    data "Max yield (tons)" value: max_dynamic_yields[cycle_count] color: #blue;//[cycle_count, length(Parasitoid)] color: #blue;
 				}
