@@ -1,7 +1,8 @@
 /**
 * Name: pestHunting
 * First Toy Model
-* Author: Rattanak
+* Coded by: Rattanak
+* Formula on excel by: Delatouche, Ngang and Sester, 2025
 * Tags: farmer
 * Base on research and game formula on the excel file
 * Using grid represent as a rice fields

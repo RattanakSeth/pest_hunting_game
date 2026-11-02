@@ -6,7 +6,7 @@ Authors: Rattanak Seth, Lucile Delatouche, Mathilde Sester, Alexis Drogoul, Sovu
 
 ---
 ## First model - PestHunting.gaml
-Building model based on game which was implemented on the Microsoft Excel by expert in the field. It was coded in Gama platform and stick to the excel formula. Before building it, it should draw class diagram, variable relation, and understand the formula in MS Excel.
+Building model based on game which was implemented on the Microsoft Excel by expert in the field (Delatouche, Ngang and Sester, 2025). It was coded in Gama platform and stick to the excel formula. Before building it, it should draw class diagram, variable relation, and understand the formula in MS Excel.
 
 ## Second model - pestHunting_second_model.gaml & insect_simulation_on_grid_2.1.gaml
 Adding from only formula in MS Excel, it was implemented as an agent-based modelling by adding insect movement, and eating. In the first version of second model, it consists of three categories such as pesticide, rice paddy and insect and describe in the following:
